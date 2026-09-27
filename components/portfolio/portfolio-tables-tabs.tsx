@@ -57,12 +57,11 @@ type PortfolioActivityLog = {
   createdAt: Date;
 };
 
-type ActiveTab = "CRYPTO" | "STOCK" | "ETF" | "CASH" | "ACTIVITY";
+type ActiveTab = "CRYPTO" | "STOCK" | "CASH" | "ACTIVITY";
 
 const tabs: Array<{ id: ActiveTab; label: string }> = [
   { id: "CRYPTO", label: "Crypto" },
   { id: "STOCK", label: "Stocks" },
-  { id: "ETF", label: "ETF" },
   { id: "CASH", label: "Cash" },
   { id: "ACTIVITY", label: "Activity" },
 ];
@@ -153,34 +152,12 @@ export function PortfolioTablesTabs({
           baseCurrency={baseCurrency}
           cashBalances={cashBalances}
           deleteAction={deletePositionAction}
-          emptyText="No stock positions yet."
+          emptyText="No stock or ETF positions yet."
           exchangeOptions={exchangeOptions}
-          positions={positions.filter((position) => position.assetType === "STOCK")}
-          title="Stocks"
-          updateAction={updatePositionAction}
-          valuationPositions={valuationPositions}
-        />
-      )}
-
-      {activeTab === "ETF" && (
-        <PositionsTable
-          addButton={
-            <PositionFormModal
-              action={createPositionAction}
-              assetType="ETF"
-              baseCurrency={baseCurrency}
-              cashBalances={cashBalances}
-              exchangeOptions={exchangeOptions}
-              mode="create"
-            />
-          }
-          baseCurrency={baseCurrency}
-          cashBalances={cashBalances}
-          deleteAction={deletePositionAction}
-          emptyText="No ETF positions yet."
-          exchangeOptions={exchangeOptions}
-          positions={positions.filter((position) => position.assetType === "ETF")}
-          title="ETF"
+          positions={positions.filter((position) =>
+            ["STOCK", "ETF"].includes(position.assetType),
+          )}
+          title="Stocks & ETF"
           updateAction={updatePositionAction}
           valuationPositions={valuationPositions}
         />
