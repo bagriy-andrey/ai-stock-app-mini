@@ -75,16 +75,19 @@ describe("portfolio form validation", () => {
   it("normalizes cash currency and rejects negative cash", () => {
     expect(
       cashBalanceFormSchema.parse({
+        platform: "IBKR",
         currency: " eur ",
         amount: "250.5",
       }),
     ).toEqual({
+      platform: "IBKR",
       currency: "EUR",
       amount: 250.5,
     });
 
     expect(() =>
       cashBalanceFormSchema.parse({
+        platform: "Bank",
         currency: "USD",
         amount: "-1",
       }),

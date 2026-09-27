@@ -23,6 +23,7 @@ export function AssetSearchFields({
   defaultExchange = "",
   defaultProvider = "manual",
   defaultProviderSymbol = "",
+  lockedAssetType,
 }: {
   defaultAssetType?: AssetType;
   defaultSymbol?: string;
@@ -31,8 +32,11 @@ export function AssetSearchFields({
   defaultExchange?: string | null;
   defaultProvider?: string;
   defaultProviderSymbol?: string;
+  lockedAssetType?: AssetType;
 }) {
-  const [assetType, setAssetType] = useState<AssetType>(defaultAssetType);
+  const [assetType, setAssetType] = useState<AssetType>(
+    lockedAssetType ?? defaultAssetType,
+  );
   const [symbol, setSymbol] = useState(defaultSymbol);
   const [name, setName] = useState(defaultName);
   const [assetCurrency, setAssetCurrency] = useState(defaultAssetCurrency);
@@ -123,20 +127,31 @@ export function AssetSearchFields({
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Type">
-          <select
-            className={inputClassName}
-            name="assetType"
-            onChange={(event) =>
-              handleAssetTypeChange(event.target.value as AssetType)
-            }
-            value={assetType}
-          >
-            {assetTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+          {lockedAssetType ? (
+            <>
+              <input name="assetType" type="hidden" value={lockedAssetType} />
+              <input
+                className={`${inputClassName} bg-zinc-100 text-zinc-600`}
+                readOnly
+                value={lockedAssetType}
+              />
+            </>
+          ) : (
+            <select
+              className={inputClassName}
+              name="assetType"
+              onChange={(event) =>
+                handleAssetTypeChange(event.target.value as AssetType)
+              }
+              value={assetType}
+            >
+              {assetTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          )}
         </Field>
         <Field label="Symbol">
           <div className="relative">
@@ -190,7 +205,7 @@ export function AssetSearchFields({
         <input
           className={inputClassName}
           name="name"
-          onChange={(event) => setName(event.target.value)}
+          readOnly
           required
           value={name}
         />

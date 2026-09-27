@@ -21,6 +21,11 @@ const optionalTextSchema = z
   .transform((value) => (value.length === 0 ? null : value));
 
 const nonNegativeNumberSchema = z.coerce.number().finite().nonnegative();
+const cashCurrencySchema = z
+  .string()
+  .trim()
+  .transform((value) => value.toUpperCase())
+  .pipe(z.enum(["USD", "EUR", "PLN"]));
 
 export const positionFormSchema = z.object({
   positionId: z.string().optional(),
@@ -54,7 +59,8 @@ export const positionDeleteFormSchema = z.object({
 
 export const cashBalanceFormSchema = z.object({
   cashBalanceId: z.string().optional(),
-  currency: currencySchema,
+  platform: z.string().trim().min(1).max(80),
+  currency: cashCurrencySchema,
   amount: nonNegativeNumberSchema,
 });
 

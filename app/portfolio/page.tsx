@@ -6,13 +6,21 @@ import {
   updatePosition,
   upsertCashBalance,
 } from "@/app/portfolio/actions";
+import { CashActionsMenu } from "@/components/portfolio/cash-actions-menu";
+import { CashFormModal } from "@/components/portfolio/cash-form-modal";
+import { PositionActionsMenu } from "@/components/portfolio/position-actions-menu";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { getPortfolioSummary } from "@/lib/portfolio/repository";
 
 export const dynamic = "force-dynamic";
 
+type PortfolioSummary = Awaited<ReturnType<typeof getPortfolioSummary>>;
+type PortfolioPosition = PortfolioSummary["positions"][number];
+type PositionValuation = PortfolioSummary["valuation"]["positions"][number];
+type CashBalance = PortfolioSummary["cashBalances"][number];
+
 export default async function PortfolioPage() {
-  let portfolio: Awaited<ReturnType<typeof getPortfolioSummary>>;
+  let portfolio: PortfolioSummary;
 
   try {
     portfolio = await getPortfolioSummary();
@@ -79,203 +87,61 @@ export default async function PortfolioPage() {
           />
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="grid gap-5">
           <div className="flex flex-col gap-4">
-            <section className="rounded border border-zinc-200 bg-white">
-              <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-                <h2 className="text-sm font-semibold uppercase text-zinc-500">
-                  Holdings
-                </h2>
+            <PositionsTable
+              addButton={
                 <PositionFormModal
                   action={createPosition}
+                  assetType="CRYPTO"
                   baseCurrency={portfolio.baseCurrency}
                   mode="create"
                 />
-              </div>
-              {portfolio.positions.length === 0 ? (
-                <p className="px-4 py-8 text-sm text-zinc-600">
-                  No positions yet. Add the first holding from the button above.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
-                    <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Asset</th>
-                        <th className="px-4 py-3 font-semibold">Type</th>
-                        <th className="px-4 py-3 font-semibold">Quantity</th>
-                        <th className="px-4 py-3 font-semibold">Avg cost</th>
-                        <th className="px-4 py-3 font-semibold">Latest price</th>
-                        <th className="px-4 py-3 font-semibold">Value</th>
-                        <th className="px-4 py-3 font-semibold">P&L</th>
-                        <th className="px-4 py-3 font-semibold">Weight</th>
-                        <th className="px-4 py-3 font-semibold">Intent</th>
-                        <th className="px-4 py-3 font-semibold">Operation</th>
-                        <th className="px-4 py-3 font-semibold">Notes</th>
-                        <th className="px-4 py-3 font-semibold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-200">
-                      {portfolio.positions.map((position) => {
-                        const valuation = portfolio.valuation.positions.find(
-                          (item) => item.id === position.id,
-                        );
-
-                        return (
-                          <tr key={position.id}>
-                            <td className="px-4 py-3 align-top">
-                              <div className="font-medium text-zinc-950">
-                                {position.symbol}
-                              </div>
-                              <div className="max-w-56 truncate text-xs text-zinc-500">
-                                {position.name}
-                              </div>
-                              <div className="text-xs text-zinc-500">
-                                {position.provider} / {position.assetCurrency}
-                                {position.exchange
-                                  ? ` / ${position.exchange}`
-                                  : ""}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {position.assetType}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {formatNumber(position.quantity)}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {formatMoney(
-                                position.averageCost,
-                                position.costCurrency,
-                              )}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {position.latestPrice
-                                ? formatMoney(
-                                    position.latestPrice.price,
-                                    position.latestPrice.currency,
-                                  )
-                                : "Missing"}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {formatMaybeMoney(
-                                valuation?.marketValue ?? null,
-                                position.latestPrice?.currency ??
-                                  position.costCurrency,
-                              )}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {formatMaybeMoney(
-                                valuation?.unrealizedPnl ?? null,
-                                position.costCurrency,
-                              )}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {formatMaybePercent(valuation?.weight ?? null)}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {formatEnum(position.investmentIntent)}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              {formatDisplayDate(position.openedAt)}
-                            </td>
-                            <td className="max-w-48 truncate px-4 py-3 align-top text-zinc-600">
-                              {position.notes ?? ""}
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              <div className="flex gap-2">
-                                <PositionFormModal
-                                  action={updatePosition}
-                                  baseCurrency={portfolio.baseCurrency}
-                                  mode="edit"
-                                  position={position}
-                                />
-                                <form action={deletePosition}>
-                                  <input
-                                    name="positionId"
-                                    type="hidden"
-                                    value={position.id}
-                                  />
-                                  <button
-                                    className={secondaryButtonClassName}
-                                    type="submit"
-                                  >
-                                    Delete
-                                  </button>
-                                </form>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              }
+              baseCurrency={portfolio.baseCurrency}
+              emptyText="No crypto positions yet."
+              positions={portfolio.positions.filter(
+                (position) => position.assetType === "CRYPTO",
               )}
-            </section>
+              title="Crypto"
+              valuationPositions={portfolio.valuation.positions}
+            />
+            <PositionsTable
+              addButton={
+                <PositionFormModal
+                  action={createPosition}
+                  assetType="STOCK"
+                  baseCurrency={portfolio.baseCurrency}
+                  mode="create"
+                />
+              }
+              baseCurrency={portfolio.baseCurrency}
+              emptyText="No stock positions yet."
+              positions={portfolio.positions.filter(
+                (position) => position.assetType === "STOCK",
+              )}
+              title="Stocks"
+              valuationPositions={portfolio.valuation.positions}
+            />
+            <PositionsTable
+              addButton={
+                <PositionFormModal
+                  action={createPosition}
+                  assetType="ETF"
+                  baseCurrency={portfolio.baseCurrency}
+                  mode="create"
+                />
+              }
+              baseCurrency={portfolio.baseCurrency}
+              emptyText="No ETF positions yet."
+              positions={portfolio.positions.filter(
+                (position) => position.assetType === "ETF",
+              )}
+              title="ETFs"
+              valuationPositions={portfolio.valuation.positions}
+            />
+            <CashTable cashBalances={portfolio.cashBalances} />
           </div>
-
-          <aside className="flex flex-col gap-5">
-            <section className="rounded border border-zinc-200 bg-white p-4">
-              <h2 className="text-sm font-semibold uppercase text-zinc-500">
-                Cash
-              </h2>
-              <form action={upsertCashBalance} className="mt-4 grid gap-3">
-                <div className="grid grid-cols-[1fr_1.4fr] gap-3">
-                  <Field label="Currency">
-                    <input
-                      className={inputClassName}
-                      defaultValue={portfolio.baseCurrency}
-                      maxLength={3}
-                      minLength={3}
-                      name="currency"
-                      required
-                    />
-                  </Field>
-                  <Field label="Amount">
-                    <input
-                      className={inputClassName}
-                      min="0"
-                      name="amount"
-                      required
-                      step="any"
-                      type="number"
-                    />
-                  </Field>
-                </div>
-                <button className={primaryButtonClassName} type="submit">
-                  Save cash
-                </button>
-              </form>
-
-              <div className="mt-4 divide-y divide-zinc-200 border-t border-zinc-200">
-                {portfolio.cashBalances.length === 0 ? (
-                  <p className="py-4 text-sm text-zinc-600">
-                    No cash balances yet.
-                  </p>
-                ) : (
-                  portfolio.cashBalances.map((cashBalance) => (
-                    <div
-                      className="flex items-center justify-between gap-3 py-3 text-sm"
-                      key={cashBalance.id}
-                    >
-                      <div>
-                        <p className="font-medium">{cashBalance.currency}</p>
-                        <p className="text-zinc-600">
-                          {formatMoney(cashBalance.amount, cashBalance.currency)}
-                        </p>
-                      </div>
-                      <DeleteButton
-                        action={deleteCashBalance}
-                        hiddenName="cashBalanceId"
-                        hiddenValue={cashBalance.id}
-                      />
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-          </aside>
         </section>
       </div>
     </main>
@@ -313,6 +179,187 @@ function PortfolioSetupState({ error }: { error: unknown }) {
   );
 }
 
+function PositionsTable({
+  title,
+  positions,
+  valuationPositions,
+  baseCurrency,
+  emptyText,
+  addButton,
+}: {
+  title: string;
+  positions: PortfolioPosition[];
+  valuationPositions: PositionValuation[];
+  baseCurrency: string;
+  emptyText: string;
+  addButton?: React.ReactNode;
+}) {
+  return (
+    <section className="rounded border border-zinc-200 bg-white">
+      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase text-zinc-500">
+            {title}
+          </h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            {positions.length} positions
+          </p>
+        </div>
+        {addButton}
+      </div>
+      {positions.length === 0 ? (
+        <p className="px-4 py-8 text-sm text-zinc-600">{emptyText}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
+            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Asset</th>
+                <th className="px-4 py-3 font-semibold">Quantity</th>
+                <th className="px-4 py-3 font-semibold">Avg cost</th>
+                <th className="px-4 py-3 font-semibold">Latest price</th>
+                <th className="px-4 py-3 font-semibold">Value</th>
+                <th className="px-4 py-3 font-semibold">P&L</th>
+                <th className="px-4 py-3 font-semibold">Weight</th>
+                <th className="px-4 py-3 font-semibold">Intent</th>
+                <th className="px-4 py-3 font-semibold">Operation</th>
+                <th className="px-4 py-3 font-semibold">Notes</th>
+                <th className="px-4 py-3 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200">
+              {positions.map((position) => {
+                const valuation = valuationPositions.find(
+                  (item) => item.id === position.id,
+                );
+
+                return (
+                  <tr key={position.id}>
+                    <td className="px-4 py-3 align-top">
+                      <div className="font-medium text-zinc-950">
+                        {position.symbol}
+                      </div>
+                      <div className="max-w-56 truncate text-xs text-zinc-500">
+                        {position.name}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {position.provider} / {position.assetCurrency}
+                        {position.exchange ? ` / ${position.exchange}` : ""}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {formatNumber(position.quantity)}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {formatMoney(position.averageCost, position.costCurrency)}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {position.latestPrice
+                        ? formatMoney(
+                            position.latestPrice.price,
+                            position.latestPrice.currency,
+                          )
+                        : "Missing"}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {formatMaybeMoney(
+                        valuation?.marketValue ?? null,
+                        position.latestPrice?.currency ?? position.costCurrency,
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {formatMaybeMoney(
+                        valuation?.unrealizedPnl ?? null,
+                        position.costCurrency,
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {formatMaybePercent(valuation?.weight ?? null)}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {formatEnum(position.investmentIntent)}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {formatDisplayDate(position.openedAt)}
+                    </td>
+                    <td className="max-w-48 truncate px-4 py-3 align-top text-zinc-600">
+                      {position.notes ?? ""}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <PositionActionsMenu
+                        baseCurrency={baseCurrency}
+                        deleteAction={deletePosition}
+                        position={position}
+                        updateAction={updatePosition}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CashTable({ cashBalances }: { cashBalances: CashBalance[] }) {
+  return (
+    <section className="rounded border border-zinc-200 bg-white">
+      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase text-zinc-500">
+            Free Cash
+          </h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            {cashBalances.length} balances
+          </p>
+        </div>
+        <CashFormModal action={upsertCashBalance} mode="create" />
+      </div>
+      {cashBalances.length === 0 ? (
+        <p className="px-4 py-8 text-sm text-zinc-600">
+          No free cash balances yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[620px] text-left text-sm">
+            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Platform</th>
+                <th className="px-4 py-3 font-semibold">Currency</th>
+                <th className="px-4 py-3 font-semibold">Amount</th>
+                <th className="px-4 py-3 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200">
+              {cashBalances.map((cashBalance) => (
+                <tr key={cashBalance.id}>
+                  <td className="px-4 py-3 font-medium">
+                    {cashBalance.platform}
+                  </td>
+                  <td className="px-4 py-3">{cashBalance.currency}</td>
+                  <td className="px-4 py-3">
+                    {formatMoney(cashBalance.amount, cashBalance.currency)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <CashActionsMenu
+                      cashBalance={cashBalance}
+                      deleteAction={deleteCashBalance}
+                      updateAction={upsertCashBalance}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SummaryMetric({
   label,
   value,
@@ -328,40 +375,6 @@ function SummaryMetric({
       <p className="mt-2 text-xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-zinc-500">{detail}</p>
     </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="grid gap-1 text-xs font-medium text-zinc-500">
-      {label}
-      {children}
-    </label>
-  );
-}
-
-function DeleteButton({
-  action,
-  hiddenName,
-  hiddenValue,
-}: {
-  action: (formData: FormData) => Promise<void>;
-  hiddenName: string;
-  hiddenValue: string;
-}) {
-  return (
-    <form action={action}>
-      <input name={hiddenName} type="hidden" value={hiddenValue} />
-      <button className={secondaryButtonClassName} type="submit">
-        Delete
-      </button>
-    </form>
   );
 }
 
@@ -421,12 +434,3 @@ function getErrorMessage(error: unknown): string {
 
   return "Unknown database error";
 }
-
-const inputClassName =
-  "h-9 w-full rounded border border-zinc-300 bg-white px-2 text-sm text-zinc-950 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600";
-
-const primaryButtonClassName =
-  "h-9 rounded bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800";
-
-const secondaryButtonClassName =
-  "h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100";

@@ -105,15 +105,33 @@ export async function upsertCashBalance(formData: FormData) {
   const input = cashBalanceFormSchema.parse(Object.fromEntries(formData));
   const portfolio = await getOrCreateDefaultPortfolio();
 
+  if (input.cashBalanceId) {
+    await prisma.cashBalance.update({
+      where: {
+        id: input.cashBalanceId,
+      },
+      data: {
+        platform: input.platform,
+        currency: input.currency,
+        amount: input.amount,
+      },
+    });
+
+    revalidatePath(PORTFOLIO_PATH);
+    return;
+  }
+
   await prisma.cashBalance.upsert({
     where: {
-      portfolioId_currency: {
+      portfolioId_platform_currency: {
         portfolioId: portfolio.id,
+        platform: input.platform,
         currency: input.currency,
       },
     },
     create: {
       portfolioId: portfolio.id,
+      platform: input.platform,
       currency: input.currency,
       amount: input.amount,
     },

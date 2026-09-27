@@ -105,13 +105,14 @@ model Position {
 model CashBalance {
   id          String    @id @default(cuid())
   portfolioId String
+  platform    String    @default("Unassigned")
   currency    String
   amount      Decimal   @db.Decimal(24, 8)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
-  @@unique([portfolioId, currency])
+  @@unique([portfolioId, platform, currency])
   @@index([portfolioId])
 }
 

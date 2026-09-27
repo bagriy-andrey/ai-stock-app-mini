@@ -29,11 +29,13 @@ export function PositionFormModal({
   baseCurrency,
   position,
   action,
+  assetType,
 }: {
   mode: "create" | "edit";
   baseCurrency: string;
   position?: PositionFormValue;
   action: (formData: FormData) => Promise<void>;
+  assetType?: AssetType;
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -123,6 +125,7 @@ export function PositionFormModal({
                 defaultProvider={position?.provider ?? "manual"}
                 defaultProviderSymbol={position?.providerSymbol ?? ""}
                 defaultSymbol={position?.symbol ?? ""}
+                lockedAssetType={assetType}
               />
 
               <div className="grid gap-3 sm:grid-cols-2">

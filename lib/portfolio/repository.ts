@@ -49,6 +49,7 @@ export type PortfolioPositionSummary = {
 
 export type CashBalanceSummary = {
   id: string;
+  platform: string;
   currency: string;
   amount: number;
 };
@@ -98,7 +99,7 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
       },
       cashBalances: {
         orderBy: {
-          currency: "asc",
+          platform: "asc",
         },
       },
     },
@@ -207,6 +208,7 @@ function toPositionSummary(
 function toCashBalanceSummary(cashBalance: CashBalance): CashBalanceSummary {
   return {
     id: cashBalance.id,
+    platform: cashBalance.platform,
     currency: cashBalance.currency,
     amount: cashBalance.amount.toNumber(),
   };

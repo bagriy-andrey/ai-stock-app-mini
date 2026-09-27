@@ -161,6 +161,10 @@ Cash balances are stored by currency from the start. Portfolio totals are comple
 
 Phase 1 does not support margin, short positions, negative cash, or liability modeling. Quantity, average cost, cash amount, target entry price, and market price fields use database-level non-negative checks.
 
+### Track free cash by platform and limited MVP currencies
+
+Free cash is stored by platform and currency so balances can be separated across brokerages, exchanges, and bank accounts. Phase 1 UI limits cash currency selection to USD, EUR, and PLN.
+
 ### Store latest price snapshots through MarketPrice
 
 Phase 1A adds normalized market price snapshots with provider provenance. The first UI workflows may use manual or mock prices before real provider integrations are selected.
