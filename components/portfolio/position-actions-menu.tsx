@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { AssetType, InvestmentIntent } from "@prisma/client";
 import { ConfirmDeleteButton } from "@/components/portfolio/confirm-delete-button";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
@@ -34,6 +35,11 @@ export function PositionActionsMenu({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{
+    right: number;
+    top: number;
+  } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,8 +47,26 @@ export function PositionActionsMenu({
       return;
     }
 
+    function updateMenuPosition() {
+      const buttonRect = buttonRef.current?.getBoundingClientRect();
+
+      if (!buttonRect) {
+        return;
+      }
+
+      setMenuPosition({
+        right: window.innerWidth - buttonRect.right,
+        top: buttonRect.bottom + 8,
+      });
+    }
+
     function handlePointerDown(event: PointerEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+
+      if (
+        !buttonRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
         setIsOpen(false);
       }
     }
@@ -53,27 +77,41 @@ export function PositionActionsMenu({
       }
     }
 
+    updateMenuPosition();
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
     };
   }, [isOpen]);
 
   return (
-    <div className="relative inline-flex" ref={menuRef}>
+    <div className="inline-flex">
       <button
         aria-label="Position actions"
         className="h-8 w-8 rounded border border-zinc-300 text-lg leading-none text-zinc-700 hover:bg-zinc-100"
         onClick={() => setIsOpen((current) => !current)}
+        ref={buttonRef}
         type="button"
       >
         ...
       </button>
-      {isOpen && (
-        <div className="absolute right-0 top-9 z-20 grid min-w-32 gap-1 rounded border border-zinc-200 bg-white p-1 shadow-lg">
+      {isOpen && menuPosition
+        ? createPortal(
+        <div
+          className="fixed z-50 grid min-w-32 gap-1 rounded border border-zinc-200 bg-white p-1 shadow-lg"
+          ref={menuRef}
+          style={{
+            right: menuPosition.right,
+            top: menuPosition.top,
+          }}
+        >
           <PositionFormModal
             action={updateAction}
             assetType={position.assetType}
@@ -88,8 +126,10 @@ export function PositionActionsMenu({
             hiddenValue={position.id}
             title="Delete position"
           />
-        </div>
-      )}
+        </div>,
+        document.body,
+      )
+        : null}
     </div>
   );
 }
