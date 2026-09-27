@@ -18,7 +18,7 @@ The project is primarily focused on long-term diversified investing. Tactical/sp
 
 ## Current Status
 
-This repository is in Phase 0 foundation setup.
+Phase 0 foundation is implemented. Phase 1 portfolio and watchlist planning is documented and ready for implementation.
 
 ## Local Development
 
@@ -47,4 +47,7 @@ npm test
 npm run build
 ```
 
-Phase 0 implementation plan: [000-foundation-plan.md](docs/plans/000-foundation-plan.md)
+Phase plans:
+
+- [000 - Foundation](docs/plans/000-foundation-plan.md)
+- [001 - Portfolio & Watchlist](docs/plans/001-portfolio-watchlist-plan.md)

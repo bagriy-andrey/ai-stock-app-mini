@@ -138,3 +138,29 @@ The application should support Russian and English UI language switching. This i
 ### Support multiple model and strategy comparisons
 
 Predictions, AI usage tracking, and Paper Trader workflows should support comparing different OpenRouter models, agents, and strategy configurations over time. The system should preserve enough metadata to evaluate quality, cost, latency, prediction accuracy, and paper-trading performance by model and strategy.
+
+## Phase 1 Decisions
+
+### Use average-cost positions for the portfolio MVP
+
+Phase 1 stores one average cost per active position. Tax lots, broker lots, dividend lots, and advanced performance attribution are deferred until later portfolio work.
+
+### Enforce one active position per portfolio and asset in Phase 1
+
+The MVP schema uses a unique `(portfolioId, assetId)` constraint for positions. Different intents for the same asset can be revisited later if there is a concrete workflow that needs separate lots or sub-positions.
+
+### Keep watchlist items unique by asset in Phase 1
+
+The MVP schema allows one watchlist item per asset. Watchlist groups and multiple strategy-specific watch entries are deferred.
+
+### Store multi-currency cash, but do not infer FX conversion
+
+Cash balances are stored by currency from the start. Portfolio totals are complete only when values can be represented in the portfolio base currency. FX conversion belongs in later market-data work.
+
+### Keep MVP portfolio quantities and cash balances non-negative
+
+Phase 1 does not support margin, short positions, negative cash, or liability modeling. Quantity, average cost, cash amount, target entry price, and market price fields use database-level non-negative checks.
+
+### Store latest price snapshots through MarketPrice
+
+Phase 1A adds normalized market price snapshots with provider provenance. The first UI workflows may use manual or mock prices before real provider integrations are selected.
