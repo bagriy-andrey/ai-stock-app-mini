@@ -94,6 +94,7 @@ export function PortfolioTablesTabs({
   createPositionAction,
   updatePositionAction,
   deletePositionAction,
+  sellPositionAction,
   upsertCashBalanceAction,
   withdrawCashBalanceAction,
   deleteCashBalanceAction,
@@ -108,6 +109,7 @@ export function PortfolioTablesTabs({
   createPositionAction: (formData: FormData) => Promise<void>;
   updatePositionAction: (formData: FormData) => Promise<void>;
   deletePositionAction: (formData: FormData) => Promise<void>;
+  sellPositionAction: (formData: FormData) => Promise<void>;
   upsertCashBalanceAction: (formData: FormData) => Promise<void>;
   withdrawCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
@@ -157,6 +159,7 @@ export function PortfolioTablesTabs({
           positions={positions.filter((position) => position.assetType === "CRYPTO")}
           title="Crypto"
           updateAction={updatePositionAction}
+          sellAction={sellPositionAction}
           valuationPositions={valuationPositions}
         />
       )}
@@ -183,6 +186,7 @@ export function PortfolioTablesTabs({
           )}
           title="Stocks & ETF"
           updateAction={updatePositionAction}
+          sellAction={sellPositionAction}
           valuationPositions={valuationPositions}
         />
       )}
@@ -219,6 +223,7 @@ function PositionsTable({
   addButton,
   updateAction,
   deleteAction,
+  sellAction,
 }: {
   title: string;
   positions: PortfolioPosition[];
@@ -230,6 +235,7 @@ function PositionsTable({
   addButton: React.ReactNode;
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
+  sellAction: (formData: FormData) => Promise<void>;
 }) {
   const [selectedPosition, setSelectedPosition] =
     useState<PortfolioPosition | null>(null);
@@ -341,6 +347,7 @@ function PositionsTable({
                         deleteAction={deleteAction}
                         exchangeOptions={exchangeOptions}
                         position={position}
+                        sellAction={sellAction}
                         updateAction={updateAction}
                       />
                     </td>

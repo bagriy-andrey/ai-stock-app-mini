@@ -177,6 +177,10 @@ Adding a real portfolio position requires an exchange/platform. The add-position
 
 Phase 1 tracks cash deposits and withdrawals in `PortfolioActivityLog`. Cash deposits are logged when the add-cash workflow increases a balance. Cash withdrawals are logged in the same transaction that decrements the selected exchange/currency cash balance. Manual cash edits remain correction workflows and do not create movement logs. The user can manually delete activity log entries from the UI to remove noisy or mistaken history rows.
 
+### Store portfolio activity logs for manual asset trades
+
+Manual asset purchases and sales are logged in `PortfolioActivityLog` with `ASSET_BUY` and `ASSET_SELL` entries. Adding or increasing a position deducts matching platform cash when that cash balance exists and records the purchase cost. Selling a position is capped by the selected platform holding quantity, decrements both the platform holding and aggregate position, increases cash on the selected platform in the holding cost currency, and records the sale proceeds. These are manual bookkeeping actions only and do not execute real brokerage trades.
+
 ### Store latest price snapshots through MarketPrice
 
 Phase 1A adds normalized market price snapshots with provider provenance. The first UI workflows may use manual or mock prices before real provider integrations are selected.

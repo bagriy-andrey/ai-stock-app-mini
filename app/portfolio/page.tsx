@@ -5,6 +5,7 @@ import {
   deleteActivityLog,
   deleteCashBalance,
   deletePosition,
+  sellPosition,
   updateBaseCurrency,
   updatePosition,
   upsertCashBalance,
@@ -109,6 +110,7 @@ export default async function PortfolioPage() {
           deleteActivityLogAction={deleteActivityLog}
           deleteCashBalanceAction={deleteCashBalance}
           deletePositionAction={deletePosition}
+          sellPositionAction={sellPosition}
           positions={portfolio.positions}
           upsertCashBalanceAction={upsertCashBalance}
           updatePositionAction={updatePosition}

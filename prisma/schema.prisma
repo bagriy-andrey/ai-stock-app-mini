@@ -32,6 +32,8 @@ enum WatchlistPriority {
 enum PortfolioActivityType {
   CASH_DEPOSIT
   CASH_WITHDRAWAL
+  ASSET_BUY
+  ASSET_SELL
 }
 
 enum PortfolioExchangeType {

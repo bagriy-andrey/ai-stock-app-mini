@@ -56,6 +56,16 @@ export const positionDeleteFormSchema = z.object({
   positionId: z.string().min(1),
 });
 
+export const positionSellFormSchema = z.object({
+  positionId: z.string().min(1),
+  holdingId: z.string().min(1),
+  platform: exchangeSchema,
+  currency: supportedCurrencySchema,
+  quantity: positiveNumberSchema,
+  unitPrice: nonNegativeNumberSchema,
+  soldAt: z.coerce.date(),
+});
+
 export const cashBalanceFormSchema = z.object({
   cashBalanceId: z.string().optional(),
   platform: z.string().trim().min(1).max(80),
@@ -89,6 +99,7 @@ export const portfolioExchangeFormSchema = z.object({
 
 export type PositionFormInput = z.infer<typeof positionFormSchema>;
 export type PositionUpdateFormInput = z.infer<typeof positionUpdateFormSchema>;
+export type PositionSellFormInput = z.infer<typeof positionSellFormSchema>;
 export type CashBalanceFormInput = z.infer<typeof cashBalanceFormSchema>;
 export type CashWithdrawalFormInput = z.infer<typeof cashWithdrawalFormSchema>;
 export type PortfolioExchangeFormInput = z.infer<

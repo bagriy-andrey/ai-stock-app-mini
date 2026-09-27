@@ -21,6 +21,7 @@ import {
   portfolioExchangeFormSchema,
   positionDeleteFormSchema,
   positionFormSchema,
+  positionSellFormSchema,
   positionUpdateFormSchema,
 } from "@/lib/portfolio/validation";
 
@@ -176,6 +177,156 @@ export async function createPosition(formData: FormData) {
         );
       }
     }
+
+    await createPortfolioActivityLog(tx, {
+      portfolioId: portfolio.id,
+      type: "ASSET_BUY",
+      platform: input.exchange,
+      currency: input.costCurrency,
+      amount: purchaseCost,
+      description: `Bought ${input.quantity} ${input.symbol} on ${input.exchange} for ${purchaseCost} ${input.costCurrency}.`,
+    });
+  });
+
+  revalidatePath(PORTFOLIO_PATH);
+}
+
+export async function sellPosition(formData: FormData) {
+  const input = positionSellFormSchema.parse(Object.fromEntries(formData));
+  const portfolio = await getOrCreateDefaultPortfolio();
+  const proceeds = calculatePurchaseCost({
+    quantity: input.quantity,
+    averageCost: input.unitPrice,
+  });
+
+  await prisma.$transaction(async (tx) => {
+    const holding = await tx.positionPlatformHolding.findUnique({
+      where: {
+        id: input.holdingId,
+      },
+      include: {
+        position: {
+          include: {
+            asset: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !holding ||
+      holding.positionId !== input.positionId ||
+      holding.position.portfolioId !== portfolio.id ||
+      holding.platform !== input.platform ||
+      holding.costCurrency !== input.currency
+    ) {
+      throw new Error("Selected exchange holding is no longer available.");
+    }
+
+    const availableQuantity = holding.quantity.toNumber();
+
+    if (availableQuantity < input.quantity) {
+      throw new Error(
+        `Cannot sell more than ${availableQuantity} ${holding.position.asset.symbol} from ${input.platform}.`,
+      );
+    }
+
+    const positionQuantity = holding.position.quantity.toNumber();
+
+    if (positionQuantity < input.quantity) {
+      throw new Error(
+        `Cannot sell more than the aggregate ${holding.position.asset.symbol} position.`,
+      );
+    }
+
+    const remainingHoldingQuantity = availableQuantity - input.quantity;
+    const remainingPositionQuantity = positionQuantity - input.quantity;
+
+    if (remainingHoldingQuantity <= 1e-8) {
+      await tx.positionPlatformHolding.delete({
+        where: {
+          id: holding.id,
+        },
+      });
+    } else {
+      const holdingUpdate = await tx.positionPlatformHolding.updateMany({
+        where: {
+          id: holding.id,
+          quantity: {
+            gte: input.quantity,
+          },
+        },
+        data: {
+          quantity: {
+            decrement: input.quantity,
+          },
+        },
+      });
+
+      if (holdingUpdate.count !== 1) {
+        throw new Error(
+          `Cannot sell more than ${availableQuantity} ${holding.position.asset.symbol} from ${input.platform}. Refresh and try again.`,
+        );
+      }
+    }
+
+    if (remainingPositionQuantity <= 1e-8) {
+      await tx.position.delete({
+        where: {
+          id: holding.position.id,
+        },
+      });
+    } else {
+      const positionUpdate = await tx.position.updateMany({
+        where: {
+          id: holding.position.id,
+          quantity: {
+            gte: input.quantity,
+          },
+        },
+        data: {
+          quantity: {
+            decrement: input.quantity,
+          },
+        },
+      });
+
+      if (positionUpdate.count !== 1) {
+        throw new Error(
+          `Cannot sell more than the aggregate ${holding.position.asset.symbol} position. Refresh and try again.`,
+        );
+      }
+    }
+
+    await tx.cashBalance.upsert({
+      where: {
+        portfolioId_platform_currency: {
+          portfolioId: portfolio.id,
+          platform: input.platform,
+          currency: input.currency,
+        },
+      },
+      create: {
+        portfolioId: portfolio.id,
+        platform: input.platform,
+        currency: input.currency,
+        amount: proceeds,
+      },
+      update: {
+        amount: {
+          increment: proceeds,
+        },
+      },
+    });
+
+    await createPortfolioActivityLog(tx, {
+      portfolioId: portfolio.id,
+      type: "ASSET_SELL",
+      platform: input.platform,
+      currency: input.currency,
+      amount: proceeds,
+      description: `Sold ${input.quantity} ${holding.position.asset.symbol} on ${input.platform} for ${proceeds} ${input.currency}.`,
+    });
   });
 
   revalidatePath(PORTFOLIO_PATH);

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { AssetType, InvestmentIntent } from "@prisma/client";
 import { ConfirmDeleteButton } from "@/components/portfolio/confirm-delete-button";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
+import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
 
 type PositionActionValue = {
   id: string;
@@ -19,6 +20,22 @@ type PositionActionValue = {
   averageCost: number;
   costCurrency: string;
   investmentIntent: InvestmentIntent;
+  openedAt: Date | null;
+  notes: string | null;
+  platformHoldings: PositionPlatformHolding[];
+  latestPrice: {
+    price: number;
+    currency: string;
+    observedAt: Date;
+  } | null;
+};
+
+type PositionPlatformHolding = {
+  id: string;
+  platform: string;
+  quantity: number;
+  averageCost: number;
+  costCurrency: string;
   openedAt: Date | null;
   notes: string | null;
 };
@@ -37,6 +54,7 @@ export function PositionActionsMenu({
   exchangeOptions,
   updateAction,
   deleteAction,
+  sellAction,
 }: {
   position: PositionActionValue;
   baseCurrency: string;
@@ -44,9 +62,11 @@ export function PositionActionsMenu({
   exchangeOptions: string[];
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
+  sellAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSellOpen, setIsSellOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
     right: number;
@@ -139,6 +159,16 @@ export function PositionActionsMenu({
             Edit
           </button>
           <button
+            className="h-9 w-full rounded px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            onClick={() => {
+              setIsSellOpen(true);
+              setIsOpen(false);
+            }}
+            type="button"
+          >
+            Sell
+          </button>
+          <button
             className="h-9 w-full rounded px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
             onClick={() => {
               setIsDeleteOpen(true);
@@ -161,6 +191,13 @@ export function PositionActionsMenu({
         isOpen={isEditOpen}
         mode="edit"
         onOpenChange={setIsEditOpen}
+        position={position}
+        showTrigger={false}
+      />
+      <PositionSellModal
+        action={sellAction}
+        isOpen={isSellOpen}
+        onOpenChange={setIsSellOpen}
         position={position}
         showTrigger={false}
       />

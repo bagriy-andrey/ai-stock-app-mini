@@ -54,6 +54,10 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - User can open an aggregated asset row and see the position quantity split by exchange/platform
 - User adds portfolio exchanges/platforms with a name and market type: crypto or stock
 - User selects the position exchange/platform from the exchanges added to the portfolio, sees matching free cash for the cost currency when it exists, and the system deducts purchase cost from that cash balance when the position is added
+- System logs asset purchases in portfolio activity history when a position is added or increased
+- User sells an asset from a selected exchange/platform, with sell quantity capped at the quantity stored on that platform holding
+- System increases the selected exchange/platform cash balance in the position cost currency by the sale proceeds
+- System logs asset sales in portfolio activity history and shows a success notification after the operation
 - User edits quantity or average price
 - User removes a position
 - User adds cash for an existing portfolio exchange/currency and the system increases that balance
@@ -74,6 +78,7 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - Selected exchange type does not match the asset operation type
 - Insufficient free cash on an existing exchange/platform and cost currency
 - Withdrawal amount greater than the selected exchange/currency cash balance
+- Sale quantity greater than the quantity available on the selected exchange/platform holding
 
 ## Dependencies
 
