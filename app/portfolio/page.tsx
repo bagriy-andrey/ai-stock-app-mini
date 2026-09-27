@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   createPosition,
+  deleteActivityLog,
   deleteCashBalance,
   deletePosition,
   updateBaseCurrency,
@@ -99,6 +100,7 @@ export default async function PortfolioPage() {
           baseCurrency={portfolio.baseCurrency}
           cashBalances={portfolio.cashBalances}
           createPositionAction={createPosition}
+          deleteActivityLogAction={deleteActivityLog}
           deleteCashBalanceAction={deleteCashBalance}
           deletePositionAction={deletePosition}
           positions={portfolio.positions}

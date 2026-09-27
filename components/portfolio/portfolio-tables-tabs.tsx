@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type {
   AssetType,
   InvestmentIntent,
@@ -89,6 +90,7 @@ export function PortfolioTablesTabs({
   upsertCashBalanceAction,
   withdrawCashBalanceAction,
   deleteCashBalanceAction,
+  deleteActivityLogAction,
 }: {
   positions: PortfolioPosition[];
   valuationPositions: PositionValuation[];
@@ -101,6 +103,7 @@ export function PortfolioTablesTabs({
   upsertCashBalanceAction: (formData: FormData) => Promise<void>;
   withdrawCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
+  deleteActivityLogAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("CRYPTO");
   const exchangeOptions = getExchangeOptions(positions, cashBalances);
@@ -186,7 +189,10 @@ export function PortfolioTablesTabs({
       )}
 
       {activeTab === "ACTIVITY" && (
-        <ActivityTable activityLogs={activityLogs} />
+        <ActivityTable
+          activityLogs={activityLogs}
+          deleteAction={deleteActivityLogAction}
+        />
       )}
     </section>
   );
@@ -560,11 +566,26 @@ function CashTable({
 
 function ActivityTable({
   activityLogs,
+  deleteAction,
 }: {
   activityLogs: PortfolioActivityLog[];
+  deleteAction: (formData: FormData) => Promise<void>;
 }) {
+  const [activityLogToDelete, setActivityLogToDelete] =
+    useState<PortfolioActivityLog | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  function showToast(message: string, type: "success" | "error") {
+    setToast({ message, type });
+    window.setTimeout(() => setToast(null), type === "success" ? 3500 : 5000);
+  }
+
   return (
     <section className="rounded border border-zinc-200 bg-white">
+      {toast ? <Toast message={toast.message} type={toast.type} /> : null}
       <div className="border-b border-zinc-200 px-4 py-3">
         <h2 className="text-sm font-semibold uppercase text-zinc-500">
           Activity
@@ -579,7 +600,7 @@ function ActivityTable({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[820px] text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Date</th>
@@ -587,11 +608,14 @@ function ActivityTable({
                 <th className="px-4 py-3 font-semibold">Exchange</th>
                 <th className="px-4 py-3 font-semibold">Amount</th>
                 <th className="px-4 py-3 font-semibold">Details</th>
+                <th className="w-12 px-4 py-3 font-semibold">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200">
               {activityLogs.map((activityLog) => (
-                <tr key={activityLog.id}>
+                <tr className="group hover:bg-zinc-50" key={activityLog.id}>
                   <td className="px-4 py-3 align-top">
                     {formatDisplayDateTime(activityLog.createdAt)}
                   </td>
@@ -609,14 +633,156 @@ function ActivityTable({
                   <td className="px-4 py-3 align-top text-zinc-600">
                     {activityLog.description}
                   </td>
+                  <td className="px-4 py-2 align-top">
+                    <button
+                      aria-label="Delete activity log"
+                      className="grid size-8 place-items-center rounded border border-red-200 text-red-700 opacity-0 transition hover:bg-red-50 group-hover:opacity-100 focus:opacity-100"
+                      onClick={() => setActivityLogToDelete(activityLog)}
+                      title="Delete"
+                      type="button"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      {activityLogToDelete ? (
+        <ActivityLogDeleteModal
+          action={deleteAction}
+          activityLog={activityLogToDelete}
+          onClose={() => setActivityLogToDelete(null)}
+          onDeleted={() => showToast("Activity log deleted.", "success")}
+          onError={(message) => showToast(message, "error")}
+        />
+      ) : null}
     </section>
   );
+}
+
+function ActivityLogDeleteModal({
+  activityLog,
+  action,
+  onClose,
+  onDeleted,
+  onError,
+}: {
+  activityLog: PortfolioActivityLog;
+  action: (formData: FormData) => Promise<void>;
+  onClose: () => void;
+  onDeleted: () => void;
+  onError: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    setIsSubmitting(true);
+
+    try {
+      await action(formData);
+      onClose();
+      onDeleted();
+      router.refresh();
+    } catch (error) {
+      onError(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-zinc-950/40 px-4 py-6">
+      <div className="w-full max-w-md rounded border border-zinc-200 bg-white shadow-xl">
+        <div className="border-b border-zinc-200 px-5 py-4">
+          <h2 className="text-base font-semibold">Delete activity log?</h2>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">
+            This removes the selected history entry from the activity table.
+          </p>
+          <p className="mt-3 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            {activityLog.description}
+          </p>
+        </div>
+        <form className="flex justify-end gap-2 px-5 py-4" onSubmit={handleSubmit}>
+          <input
+            name="activityLogId"
+            type="hidden"
+            value={activityLog.id}
+          />
+          <button
+            className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            disabled={isSubmitting}
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="h-9 rounded bg-red-700 px-3 text-sm font-medium text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-300"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? "Deleting..." : "Delete"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Toast({
+  message,
+  type,
+}: {
+  message: string;
+  type: "success" | "error";
+}) {
+  return (
+    <div
+      className={`fixed right-5 top-5 z-[60] rounded border px-4 py-3 text-sm font-medium shadow-lg ${
+        type === "success"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+          : "border-red-200 bg-red-50 text-red-900"
+      }`}
+    >
+      {message}
+    </div>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v5" />
+      <path d="M14 11v5" />
+    </svg>
+  );
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Unable to delete activity log.";
 }
 
 function formatMoney(value: number, currency: string): string {

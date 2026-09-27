@@ -13,6 +13,7 @@ import {
   upsertManualAsset,
 } from "@/lib/portfolio/repository";
 import {
+  activityLogDeleteFormSchema,
   cashBalanceDeleteFormSchema,
   cashBalanceFormSchema,
   cashWithdrawalFormSchema,
@@ -355,6 +356,20 @@ export async function deleteCashBalance(formData: FormData) {
   await prisma.cashBalance.delete({
     where: {
       id: input.cashBalanceId,
+    },
+  });
+
+  revalidatePath(PORTFOLIO_PATH);
+}
+
+export async function deleteActivityLog(formData: FormData) {
+  const input = activityLogDeleteFormSchema.parse(Object.fromEntries(formData));
+  const portfolio = await getOrCreateDefaultPortfolio();
+
+  await prisma.portfolioActivityLog.delete({
+    where: {
+      id: input.activityLogId,
+      portfolioId: portfolio.id,
     },
   });
 

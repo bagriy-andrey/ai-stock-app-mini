@@ -72,6 +72,10 @@ export const cashWithdrawalFormSchema = z.object({
   amount: positiveNumberSchema,
 });
 
+export const activityLogDeleteFormSchema = z.object({
+  activityLogId: z.string().min(1),
+});
+
 export const portfolioBaseCurrencyFormSchema = z.object({
   baseCurrency: supportedCurrencySchema,
 });

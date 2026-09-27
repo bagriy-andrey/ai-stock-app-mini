@@ -175,7 +175,7 @@ Adding a real portfolio position requires an exchange/platform. The add-position
 
 ### Store portfolio activity logs for cash movements
 
-Phase 1 tracks cash deposits and withdrawals in an append-only `PortfolioActivityLog` table. Cash deposits are logged when the add-cash workflow increases a balance. Cash withdrawals are logged in the same transaction that decrements the selected exchange/currency cash balance. Manual cash edits remain correction workflows and do not create movement logs.
+Phase 1 tracks cash deposits and withdrawals in `PortfolioActivityLog`. Cash deposits are logged when the add-cash workflow increases a balance. Cash withdrawals are logged in the same transaction that decrements the selected exchange/currency cash balance. Manual cash edits remain correction workflows and do not create movement logs. The user can manually delete activity log entries from the UI to remove noisy or mistaken history rows.
 
 ### Store latest price snapshots through MarketPrice
 
