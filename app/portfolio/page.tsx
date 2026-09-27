@@ -3,9 +3,11 @@ import {
   createPosition,
   deleteCashBalance,
   deletePosition,
+  updateBaseCurrency,
   updatePosition,
   upsertCashBalance,
 } from "@/app/portfolio/actions";
+import { BaseCurrencySelect } from "@/components/portfolio/base-currency-select";
 import { PortfolioTablesTabs } from "@/components/portfolio/portfolio-tables-tabs";
 import { getPortfolioSummary } from "@/lib/portfolio/repository";
 
@@ -35,12 +37,10 @@ export default async function PortfolioPage() {
               Real portfolio tracking. Advisory-only, no AI trading actions.
             </p>
           </div>
-          <div className="text-sm text-zinc-600">
-            Base currency:{" "}
-            <span className="font-semibold text-zinc-950">
-              {portfolio.baseCurrency}
-            </span>
-          </div>
+          <BaseCurrencySelect
+            action={updateBaseCurrency}
+            baseCurrency={portfolio.baseCurrency}
+          />
         </header>
 
         <section className="grid gap-3 md:grid-cols-4">
@@ -53,12 +53,16 @@ export default async function PortfolioPage() {
             detail={portfolio.valuation.isComplete ? "Complete" : "Partial"}
           />
           <SummaryMetric
-            label="Priced holdings"
+            label="Holdings value"
             value={formatMoney(
               portfolio.valuation.pricedPositionValue,
               portfolio.baseCurrency,
             )}
-            detail={`${portfolio.positions.length} positions`}
+            detail={
+              portfolio.valuation.hasMissingPrices
+                ? `${portfolio.positions.length} positions, missing prices estimated`
+                : `${portfolio.positions.length} positions`
+            }
           />
           <SummaryMetric
             label="Base cash"

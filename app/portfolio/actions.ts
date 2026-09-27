@@ -9,6 +9,7 @@ import {
 import {
   cashBalanceDeleteFormSchema,
   cashBalanceFormSchema,
+  portfolioBaseCurrencyFormSchema,
   positionDeleteFormSchema,
   positionFormSchema,
   positionUpdateFormSchema,
@@ -149,6 +150,22 @@ export async function deleteCashBalance(formData: FormData) {
   await prisma.cashBalance.delete({
     where: {
       id: input.cashBalanceId,
+    },
+  });
+
+  revalidatePath(PORTFOLIO_PATH);
+}
+
+export async function updateBaseCurrency(formData: FormData) {
+  const input = portfolioBaseCurrencyFormSchema.parse(Object.fromEntries(formData));
+  const portfolio = await getOrCreateDefaultPortfolio();
+
+  await prisma.portfolio.update({
+    where: {
+      id: portfolio.id,
+    },
+    data: {
+      baseCurrency: input.baseCurrency,
     },
   });
 

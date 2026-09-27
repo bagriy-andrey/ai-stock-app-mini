@@ -1,12 +1,6 @@
 import { AssetType, InvestmentIntent } from "@prisma/client";
 import { z } from "zod";
-
-const currencySchema = z
-  .string()
-  .trim()
-  .min(3)
-  .max(3)
-  .transform((value) => value.toUpperCase());
+import { SUPPORTED_PORTFOLIO_CURRENCIES } from "@/lib/portfolio/currencies";
 
 const symbolSchema = z
   .string()
@@ -21,18 +15,18 @@ const optionalTextSchema = z
   .transform((value) => (value.length === 0 ? null : value));
 
 const nonNegativeNumberSchema = z.coerce.number().finite().nonnegative();
-const cashCurrencySchema = z
+const supportedCurrencySchema = z
   .string()
   .trim()
   .transform((value) => value.toUpperCase())
-  .pipe(z.enum(["USD", "EUR", "PLN"]));
+  .pipe(z.enum(SUPPORTED_PORTFOLIO_CURRENCIES));
 
 export const positionFormSchema = z.object({
   positionId: z.string().optional(),
   symbol: symbolSchema,
   name: z.string().trim().min(1).max(120),
   assetType: z.nativeEnum(AssetType),
-  assetCurrency: currencySchema,
+  assetCurrency: supportedCurrencySchema,
   exchange: optionalTextSchema,
   provider: z
     .string()
@@ -43,7 +37,7 @@ export const positionFormSchema = z.object({
   providerSymbol: symbolSchema,
   quantity: nonNegativeNumberSchema,
   averageCost: nonNegativeNumberSchema,
-  costCurrency: currencySchema,
+  costCurrency: supportedCurrencySchema,
   investmentIntent: z.nativeEnum(InvestmentIntent),
   openedAt: z.coerce.date(),
   notes: optionalTextSchema,
@@ -60,12 +54,16 @@ export const positionDeleteFormSchema = z.object({
 export const cashBalanceFormSchema = z.object({
   cashBalanceId: z.string().optional(),
   platform: z.string().trim().min(1).max(80),
-  currency: cashCurrencySchema,
+  currency: supportedCurrencySchema,
   amount: nonNegativeNumberSchema,
 });
 
 export const cashBalanceDeleteFormSchema = z.object({
   cashBalanceId: z.string().min(1),
+});
+
+export const portfolioBaseCurrencyFormSchema = z.object({
+  baseCurrency: supportedCurrencySchema,
 });
 
 export type PositionFormInput = z.infer<typeof positionFormSchema>;

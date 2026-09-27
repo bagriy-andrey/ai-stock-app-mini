@@ -60,6 +60,7 @@ describe("portfolio calculations", () => {
       weight: 0.5,
       isPriced: true,
       isComparable: true,
+      usesCostBasisFallback: false,
     });
     expect(valuation.positions[1].weight).toBe(0.4);
     expect(valuation.cashBalances[0]).toMatchObject({
@@ -69,7 +70,7 @@ describe("portfolio calculations", () => {
     });
   });
 
-  it("marks totals incomplete when a position is missing a price", () => {
+  it("keeps a partial total when a position is missing a price", () => {
     const valuation = calculatePortfolioValuation({
       baseCurrency: "USD",
       positions: [
@@ -90,19 +91,65 @@ describe("portfolio calculations", () => {
       ],
     });
 
-    expect(valuation.totalValue).toBeNull();
+    expect(valuation.totalValue).toBe(200);
+    expect(valuation.pricedPositionValue).toBe(100);
     expect(valuation.isComplete).toBe(false);
     expect(valuation.hasMissingPrices).toBe(true);
     expect(valuation.positions[0]).toMatchObject({
       costBasis: 100,
-      marketValue: null,
+      marketValue: 100,
       unrealizedPnl: null,
       unrealizedPnlPercent: null,
-      weight: null,
+      weight: 0.5,
       isPriced: false,
       isComparable: false,
+      usesCostBasisFallback: true,
     });
-    expect(valuation.cashBalances[0].weight).toBeNull();
+    expect(valuation.cashBalances[0].weight).toBe(0.5);
+  });
+
+  it("converts positions and cash into the base currency", () => {
+    const valuation = calculatePortfolioValuation({
+      baseCurrency: "USD",
+      fxRates: {
+        EUR: 1.1,
+      },
+      positions: [
+        {
+          id: "position-eur",
+          quantity: 3,
+          averageCost: 100,
+          costCurrency: "EUR",
+          latestPrice: {
+            price: 110,
+            currency: "EUR",
+          },
+        },
+      ],
+      cashBalances: [
+        {
+          id: "cash-eur",
+          currency: "EUR",
+          amount: 50,
+        },
+      ],
+    });
+
+    expect(valuation.totalValue).toBeCloseTo(418);
+    expect(valuation.pricedPositionValue).toBeCloseTo(363);
+    expect(valuation.baseCurrencyCashValue).toBeCloseTo(55);
+    expect(valuation.isComplete).toBe(true);
+    expect(valuation.hasMissingPrices).toBe(false);
+    expect(valuation.hasUnsupportedCurrencies).toBe(false);
+    expect(valuation.positions[0].costBasis).toBeCloseTo(330);
+    expect(valuation.positions[0].marketValue).toBeCloseTo(363);
+    expect(valuation.positions[0].unrealizedPnl).toBeCloseTo(33);
+    expect(valuation.positions[0].unrealizedPnlPercent).toBeCloseTo(0.1);
+    expect(valuation.positions[0].weight).toBeCloseTo(363 / 418);
+    expect(valuation.positions[0].isComparable).toBe(true);
+    expect(valuation.cashBalances[0].value).toBeCloseTo(55);
+    expect(valuation.cashBalances[0].weight).toBeCloseTo(55 / 418);
+    expect(valuation.cashBalances[0].isBaseCurrency).toBe(false);
   });
 
   it("marks totals incomplete when currencies cannot be converted", () => {
@@ -134,11 +181,11 @@ describe("portfolio calculations", () => {
     expect(valuation.hasMissingPrices).toBe(false);
     expect(valuation.hasUnsupportedCurrencies).toBe(true);
     expect(valuation.positions[0]).toMatchObject({
-      marketValue: 330,
-      unrealizedPnl: 30,
-      unrealizedPnlPercent: 0.1,
+      marketValue: null,
+      unrealizedPnl: null,
+      unrealizedPnlPercent: null,
       weight: null,
-      isComparable: true,
+      isComparable: false,
     });
     expect(valuation.cashBalances[0]).toMatchObject({
       value: null,

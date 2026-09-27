@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { AssetType } from "@prisma/client";
+import {
+  SUPPORTED_PORTFOLIO_CURRENCIES,
+  isSupportedPortfolioCurrency,
+} from "@/lib/portfolio/currencies";
 
 type AssetSearchResult = {
   symbol: string;
@@ -24,6 +28,7 @@ export function AssetSearchFields({
   defaultProvider = "manual",
   defaultProviderSymbol = "",
   lockedAssetType,
+  onAssetCurrencyResolved,
 }: {
   defaultAssetType?: AssetType;
   defaultSymbol?: string;
@@ -33,6 +38,7 @@ export function AssetSearchFields({
   defaultProvider?: string;
   defaultProviderSymbol?: string;
   lockedAssetType?: AssetType;
+  onAssetCurrencyResolved?: (currency: string, isLocked: boolean) => void;
 }) {
   const [assetType, setAssetType] = useState<AssetType>(
     lockedAssetType ?? defaultAssetType,
@@ -40,6 +46,9 @@ export function AssetSearchFields({
   const [symbol, setSymbol] = useState(defaultSymbol);
   const [name, setName] = useState(defaultName);
   const [assetCurrency, setAssetCurrency] = useState(defaultAssetCurrency);
+  const [isAssetCurrencyLocked, setIsAssetCurrencyLocked] = useState(
+    defaultProvider !== "manual" && defaultAssetCurrency.length > 0,
+  );
   const [exchange, setExchange] = useState(defaultExchange ?? "");
   const [provider, setProvider] = useState(defaultProvider);
   const [providerSymbol, setProviderSymbol] = useState(
@@ -104,20 +113,30 @@ export function AssetSearchFields({
     setProvider("manual");
     setProviderSymbol("");
     setResults([]);
+    setIsAssetCurrencyLocked(false);
+    onAssetCurrencyResolved?.(assetCurrency, false);
 
     if (nextAssetType === "CRYPTO") {
       setAssetCurrency("USD");
+      onAssetCurrencyResolved?.("USD", false);
     }
   }
 
   function selectResult(result: AssetSearchResult) {
+    const nextCurrency = isSupportedPortfolioCurrency(result.currency)
+      ? result.currency.toUpperCase()
+      : assetCurrency;
+    const shouldLockCurrency = isSupportedPortfolioCurrency(result.currency);
+
     setSymbol(result.symbol);
     setName(result.name);
-    setAssetCurrency(result.currency);
+    setAssetCurrency(nextCurrency);
+    setIsAssetCurrencyLocked(shouldLockCurrency);
     setExchange(result.exchange ?? "");
     setProvider(result.provider);
     setProviderSymbol(result.providerSymbol);
     setResults([]);
+    onAssetCurrencyResolved?.(nextCurrency, shouldLockCurrency);
   }
 
   return (
@@ -164,6 +183,8 @@ export function AssetSearchFields({
                 setSymbol(value);
                 setProvider("manual");
                 setProviderSymbol(value);
+                setIsAssetCurrencyLocked(false);
+                onAssetCurrencyResolved?.(assetCurrency, false);
                 if (value.trim().length < 2) {
                   setResults([]);
                 }
@@ -213,17 +234,26 @@ export function AssetSearchFields({
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Asset CCY">
-          <input
+          {isAssetCurrencyLocked ? (
+            <input name="assetCurrency" type="hidden" value={assetCurrency} />
+          ) : null}
+          <select
             className={inputClassName}
-            maxLength={3}
-            minLength={3}
+            disabled={isAssetCurrencyLocked}
             name="assetCurrency"
-            onChange={(event) =>
-              setAssetCurrency(event.target.value.toUpperCase())
-            }
+            onChange={(event) => {
+              setAssetCurrency(event.target.value);
+              onAssetCurrencyResolved?.(event.target.value, false);
+            }}
             required
             value={assetCurrency}
-          />
+          >
+            {SUPPORTED_PORTFOLIO_CURRENCIES.map((currency) => (
+              <option key={currency} value={currency}>
+                {currency}
+              </option>
+            ))}
+          </select>
         </Field>
         <Field label="Exchange">
           <input

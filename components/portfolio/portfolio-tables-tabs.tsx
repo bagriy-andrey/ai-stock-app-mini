@@ -156,6 +156,7 @@ export function PortfolioTablesTabs({
 
       {activeTab === "CASH" && (
         <CashTable
+          baseCurrency={baseCurrency}
           cashBalances={cashBalances}
           deleteAction={deleteCashBalanceAction}
           upsertAction={upsertCashBalanceAction}
@@ -254,13 +255,13 @@ function PositionsTable({
                     <td className="px-4 py-3 align-top">
                       {formatMaybeMoney(
                         valuation?.marketValue ?? null,
-                        position.latestPrice?.currency ?? position.costCurrency,
+                        baseCurrency,
                       )}
                     </td>
                     <td className="px-4 py-3 align-top">
                       {formatMaybeMoney(
                         valuation?.unrealizedPnl ?? null,
-                        position.costCurrency,
+                        baseCurrency,
                       )}
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -296,10 +297,12 @@ function PositionsTable({
 
 function CashTable({
   cashBalances,
+  baseCurrency,
   upsertAction,
   deleteAction,
 }: {
   cashBalances: CashBalance[];
+  baseCurrency: string;
   upsertAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -314,7 +317,11 @@ function CashTable({
             {cashBalances.length} balances
           </p>
         </div>
-        <CashFormModal action={upsertAction} mode="create" />
+        <CashFormModal
+          action={upsertAction}
+          baseCurrency={baseCurrency}
+          mode="create"
+        />
       </div>
       {cashBalances.length === 0 ? (
         <p className="px-4 py-8 text-sm text-zinc-600">
@@ -343,6 +350,7 @@ function CashTable({
                   </td>
                   <td className="px-4 py-3">
                     <CashActionsMenu
+                      baseCurrency={baseCurrency}
                       cashBalance={cashBalance}
                       deleteAction={deleteAction}
                       updateAction={upsertAction}

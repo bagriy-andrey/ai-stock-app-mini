@@ -13,10 +13,12 @@ type CashValue = {
 
 export function CashActionsMenu({
   cashBalance,
+  baseCurrency,
   updateAction,
   deleteAction,
 }: {
   cashBalance: CashValue;
+  baseCurrency: string;
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -63,6 +65,7 @@ export function CashActionsMenu({
         <div className="absolute right-0 top-9 z-20 grid min-w-32 gap-1 rounded border border-zinc-200 bg-white p-1 shadow-lg">
           <CashFormModal
             action={updateAction}
+            baseCurrency={baseCurrency}
             cashBalance={cashBalance}
             mode="edit"
           />

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { getLatestPortfolioFxRates } from "@/lib/market-data/fx-rates";
 import {
   calculatePortfolioValuation,
   type PortfolioValuation,
@@ -107,8 +108,12 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
 
   const positions = portfolioWithData.positions.map(toPositionSummary);
   const cashBalances = portfolioWithData.cashBalances.map(toCashBalanceSummary);
+  const fxRates = await getLatestPortfolioFxRates(
+    portfolioWithData.baseCurrency,
+  );
   const valuation = calculatePortfolioValuation({
     baseCurrency: portfolioWithData.baseCurrency,
+    fxRates,
     positions: positions.map((position) => ({
       id: position.id,
       quantity: position.quantity,

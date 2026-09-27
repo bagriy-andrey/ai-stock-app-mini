@@ -172,3 +172,7 @@ Phase 1A adds normalized market price snapshots with provider provenance. The fi
 ### Use provider search only as an asset metadata helper in Phase 1
 
 Portfolio entry can search local assets, CoinGecko crypto metadata, and FMP stock/ETF metadata when `FMP_API_KEY` is configured. These searches populate asset fields only; they do not execute trades and they do not replace later market-price ingestion.
+
+### Use Frankfurter for MVP portfolio FX conversion
+
+Portfolio base currency is user-selectable between USD, EUR, and PLN and is persisted on the default portfolio. The MVP uses the no-key Frankfurter latest-rates API to convert supported cash balances and holdings into the selected base currency for portfolio summary calculations. If a holding has no latest market price yet, summary value falls back to average cost while keeping the portfolio status incomplete and P&L unavailable for that holding. If an FX rate cannot be fetched, affected totals are marked incomplete instead of using stale or invented rates.

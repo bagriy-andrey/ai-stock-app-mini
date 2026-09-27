@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { SUPPORTED_PORTFOLIO_CURRENCIES } from "@/lib/portfolio/currencies";
 
 type CashValue = {
   id: string;
@@ -10,14 +11,14 @@ type CashValue = {
   amount: number;
 };
 
-const cashCurrencies = ["USD", "EUR", "PLN"] as const;
-
 export function CashFormModal({
   mode,
+  baseCurrency,
   cashBalance,
   action,
 }: {
   mode: "create" | "edit";
+  baseCurrency: string;
   cashBalance?: CashValue;
   action: (formData: FormData) => Promise<void>;
 }) {
@@ -94,11 +95,11 @@ export function CashFormModal({
                 <Field label="Currency">
                   <select
                     className={inputClassName}
-                    defaultValue={cashBalance?.currency ?? "USD"}
+                    defaultValue={cashBalance?.currency ?? baseCurrency}
                     name="currency"
                     required
                   >
-                    {cashCurrencies.map((currency) => (
+                    {SUPPORTED_PORTFOLIO_CURRENCIES.map((currency) => (
                       <option key={currency} value={currency}>
                         {currency}
                       </option>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AssetType, InvestmentIntent } from "@prisma/client";
 import { AssetSearchFields } from "@/components/portfolio/asset-search-fields";
+import { SUPPORTED_PORTFOLIO_CURRENCIES } from "@/lib/portfolio/currencies";
 
 type PositionFormValue = {
   id: string;
@@ -41,6 +42,12 @@ export function PositionFormModal({
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [costCurrency, setCostCurrency] = useState(
+    position?.costCurrency ?? baseCurrency,
+  );
+  const [isCostCurrencyLocked, setIsCostCurrencyLocked] = useState(
+    position?.provider !== undefined && position.provider !== "manual",
+  );
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -60,6 +67,8 @@ export function PositionFormModal({
       if (mode === "create") {
         form.reset();
         setFormKey((current) => current + 1);
+        setCostCurrency(baseCurrency);
+        setIsCostCurrencyLocked(false);
       }
 
       setIsOpen(false);
@@ -87,7 +96,14 @@ export function PositionFormModal({
     <>
       <button
         className={mode === "create" ? primaryButtonClassName : secondaryButtonClassName}
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          if (mode === "create") {
+            setCostCurrency(baseCurrency);
+            setIsCostCurrencyLocked(false);
+          }
+
+          setIsOpen(true);
+        }}
         type="button"
       >
         {mode === "create" ? "Add Position" : "Edit"}
@@ -126,6 +142,10 @@ export function PositionFormModal({
                 defaultProviderSymbol={position?.providerSymbol ?? ""}
                 defaultSymbol={position?.symbol ?? ""}
                 lockedAssetType={assetType}
+                onAssetCurrencyResolved={(currency, isLocked) => {
+                  setCostCurrency(currency);
+                  setIsCostCurrencyLocked(isLocked);
+                }}
               />
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -155,14 +175,23 @@ export function PositionFormModal({
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Cost CCY">
-                  <input
+                  {isCostCurrencyLocked ? (
+                    <input name="costCurrency" type="hidden" value={costCurrency} />
+                  ) : null}
+                  <select
                     className={inputClassName}
-                    defaultValue={position?.costCurrency ?? baseCurrency}
-                    maxLength={3}
-                    minLength={3}
+                    disabled={isCostCurrencyLocked}
                     name="costCurrency"
+                    onChange={(event) => setCostCurrency(event.target.value)}
                     required
-                  />
+                    value={costCurrency}
+                  >
+                    {SUPPORTED_PORTFOLIO_CURRENCIES.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Intent">
                   <select

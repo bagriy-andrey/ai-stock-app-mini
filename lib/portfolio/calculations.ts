@@ -1,3 +1,5 @@
+import { normalizeCurrency } from "@/lib/portfolio/currencies";
+
 export type PositionPriceInput = {
   price: number;
   currency: string;
@@ -28,6 +30,7 @@ export type PositionValuation = {
   weight: number | null;
   isPriced: boolean;
   isComparable: boolean;
+  usesCostBasisFallback: boolean;
 };
 
 export type CashValuation = {
@@ -41,6 +44,7 @@ export type CashValuation = {
 
 export type PortfolioValuation = {
   baseCurrency: string;
+  fxRates: Record<string, number>;
   positions: PositionValuation[];
   cashBalances: CashValuation[];
   totalValue: number | null;
@@ -94,25 +98,23 @@ export function calculatePortfolioValuation(input: {
   baseCurrency: string;
   positions: PortfolioPositionInput[];
   cashBalances: CashBalanceInput[];
+  fxRates?: Record<string, number>;
 }): PortfolioValuation {
   const baseCurrency = normalizeCurrency(input.baseCurrency);
+  const fxRates = normalizeFxRates(input.fxRates ?? {}, baseCurrency);
   const positionValues = input.positions.map((position) =>
-    calculatePositionValuation(position),
+    calculatePositionValuation(position, baseCurrency, fxRates),
   );
   const cashBalances = input.cashBalances.map((cash) =>
-    calculateCashValuation(cash, baseCurrency),
+    calculateCashValuation(cash, baseCurrency, fxRates),
   );
 
   const hasMissingPrices = positionValues.some((position) => !position.isPriced);
-  const hasUnsupportedPositionCurrencies = input.positions.some((position) => {
-    if (!position.latestPrice) {
-      return false;
-    }
-
-    return normalizeCurrency(position.latestPrice.currency) !== baseCurrency;
-  });
+  const hasUnsupportedPositionCurrencies = positionValues.some(
+    (position) => position.marketValue === null,
+  );
   const hasUnsupportedCashCurrencies = cashBalances.some(
-    (cash) => !cash.isBaseCurrency,
+    (cash) => cash.value === null,
   );
   const hasUnsupportedCurrencies =
     hasUnsupportedPositionCurrencies || hasUnsupportedCashCurrencies;
@@ -124,12 +126,13 @@ export function calculatePortfolioValuation(input: {
     cashBalances.map((cash) => cash.value),
   );
   const isComplete = !hasMissingPrices && !hasUnsupportedCurrencies;
-  const totalValue = isComplete
-    ? pricedPositionValue + baseCurrencyCashValue
-    : null;
+  const totalValue = hasUnsupportedCurrencies
+    ? null
+    : pricedPositionValue + baseCurrencyCashValue;
 
   return {
     baseCurrency,
+    fxRates,
     positions: positionValues.map((position) => ({
       ...position,
       weight: calculateWeight(position.marketValue, totalValue),
@@ -160,16 +163,30 @@ export function calculateWeight(
 
 function calculatePositionValuation(
   position: PortfolioPositionInput,
+  baseCurrency: string,
+  fxRates: Record<string, number>,
 ): PositionValuation {
-  const costBasis = calculateCostBasis(position);
-  const marketValue = calculateMarketValue(position);
+  const nativeCostBasis = calculateCostBasis(position);
+  const nativeMarketValue = calculateMarketValue(position);
   const priceCurrency = position.latestPrice?.currency;
+  const valueCurrency = priceCurrency ?? position.costCurrency;
+  const costBasis = convertToBaseCurrency(
+    nativeCostBasis,
+    position.costCurrency,
+    baseCurrency,
+    fxRates,
+  );
+  const marketValue = convertToBaseCurrency(
+    nativeMarketValue ?? nativeCostBasis,
+    valueCurrency,
+    baseCurrency,
+    fxRates,
+  );
   const isComparable =
-    priceCurrency !== undefined &&
-    normalizeCurrency(priceCurrency) === normalizeCurrency(position.costCurrency);
+    nativeMarketValue !== null && marketValue !== null && costBasis !== null;
   const unrealizedPnl = calculateUnrealizedPnl({
     marketValue,
-    costBasis,
+    costBasis: costBasis ?? nativeCostBasis,
     isComparable,
   });
 
@@ -177,39 +194,76 @@ function calculatePositionValuation(
     id: position.id,
     quantity: position.quantity,
     averageCost: position.averageCost,
-    costBasis,
+    costBasis: costBasis ?? nativeCostBasis,
     marketValue,
     unrealizedPnl,
     unrealizedPnlPercent: calculateUnrealizedPnlPercent({
       unrealizedPnl,
-      costBasis,
+      costBasis: costBasis ?? nativeCostBasis,
     }),
     weight: null,
-    isPriced: marketValue !== null,
+    isPriced: nativeMarketValue !== null,
     isComparable,
+    usesCostBasisFallback: nativeMarketValue === null,
   };
 }
 
 function calculateCashValuation(
   cash: CashBalanceInput,
   baseCurrency: string,
+  fxRates: Record<string, number>,
 ): CashValuation {
-  const isBaseCurrency = normalizeCurrency(cash.currency) === baseCurrency;
+  const currency = normalizeCurrency(cash.currency);
+  const isBaseCurrency = currency === baseCurrency;
 
   return {
     id: cash.id,
-    currency: normalizeCurrency(cash.currency),
+    currency,
     amount: cash.amount,
-    value: isBaseCurrency ? cash.amount : null,
+    value: convertToBaseCurrency(cash.amount, currency, baseCurrency, fxRates),
     weight: null,
     isBaseCurrency,
   };
 }
 
-function normalizeCurrency(currency: string): string {
-  return currency.trim().toUpperCase();
-}
-
 function sumNumbers(values: Array<number | null>): number {
   return values.reduce<number>((total, value) => total + (value ?? 0), 0);
+}
+
+function convertToBaseCurrency(
+  amount: number,
+  currency: string,
+  baseCurrency: string,
+  fxRates: Record<string, number>,
+): number | null {
+  const normalizedCurrency = normalizeCurrency(currency);
+
+  if (normalizedCurrency === baseCurrency) {
+    return amount;
+  }
+
+  const rate = fxRates[normalizedCurrency];
+
+  if (!rate) {
+    return null;
+  }
+
+  return amount * rate;
+}
+
+function normalizeFxRates(
+  fxRates: Record<string, number>,
+  baseCurrency: string,
+): Record<string, number> {
+  const normalizedRates: Record<string, number> = {
+    [baseCurrency]: 1,
+  };
+
+  for (const [currency, rate] of Object.entries(fxRates)) {
+    if (rate > 0) {
+      normalizedRates[normalizeCurrency(currency)] = rate;
+    }
+  }
+
+  return normalizedRates;
 }
