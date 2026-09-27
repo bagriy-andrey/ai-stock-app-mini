@@ -114,6 +114,7 @@ export default async function PortfolioPage() {
           positions={portfolio.positions}
           upsertCashBalanceAction={upsertCashBalance}
           updatePositionAction={updatePosition}
+          valuationCashBalances={portfolio.valuation.cashBalances}
           valuationPositions={portfolio.valuation.positions}
           withdrawCashBalanceAction={withdrawCashBalance}
         />

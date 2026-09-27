@@ -53,6 +53,12 @@ type PositionValuation = {
   weight: number | null;
 };
 
+type CashValuation = {
+  id: string;
+  value: number | null;
+  weight: number | null;
+};
+
 type CashBalance = {
   id: string;
   platform: string;
@@ -76,18 +82,20 @@ type PortfolioActivityLog = {
   createdAt: Date;
 };
 
-type ActiveTab = "CRYPTO" | "STOCK" | "CASH" | "ACTIVITY";
+type ActiveTab = "CRYPTO" | "STOCK" | "CASH" | "CHARTS" | "ACTIVITY";
 
 const tabs: Array<{ id: ActiveTab; label: string }> = [
   { id: "CRYPTO", label: "Crypto" },
   { id: "STOCK", label: "Stocks" },
   { id: "CASH", label: "Cash" },
+  { id: "CHARTS", label: "Charts" },
   { id: "ACTIVITY", label: "Activity" },
 ];
 
 export function PortfolioTablesTabs({
   positions,
   valuationPositions,
+  valuationCashBalances,
   cashBalances,
   exchanges,
   activityLogs,
@@ -103,6 +111,7 @@ export function PortfolioTablesTabs({
 }: {
   positions: PortfolioPosition[];
   valuationPositions: PositionValuation[];
+  valuationCashBalances: CashValuation[];
   cashBalances: CashBalance[];
   exchanges: PortfolioExchange[];
   activityLogs: PortfolioActivityLog[];
@@ -117,9 +126,25 @@ export function PortfolioTablesTabs({
   deleteActivityLogAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("CRYPTO");
+  const [chartSelectedPosition, setChartSelectedPosition] =
+    useState<PortfolioPosition | null>(null);
+  const [chartPositionToSell, setChartPositionToSell] =
+    useState<PortfolioPosition | null>(null);
+  const [chartPositionToBuy, setChartPositionToBuy] =
+    useState<PortfolioPosition | null>(null);
   const cryptoExchangeOptions = getExchangeOptions(exchanges, "CRYPTO");
   const stockExchangeOptions = getExchangeOptions(exchanges, "STOCK");
   const cashExchangeOptions = getExchangeOptions(exchanges);
+
+  function openChartSellModal(position: PortfolioPosition) {
+    setChartSelectedPosition(null);
+    setChartPositionToSell(position);
+  }
+
+  function openChartBuyModal(position: PortfolioPosition) {
+    setChartSelectedPosition(null);
+    setChartPositionToBuy(position);
+  }
 
   return (
     <section className="grid gap-4">
@@ -130,7 +155,7 @@ export function PortfolioTablesTabs({
               activeTab === tab.id
                 ? "border-zinc-950 text-zinc-950"
                 : "border-transparent text-zinc-500 hover:text-zinc-950"
-            } ${tab.id === "ACTIVITY" ? "ml-auto" : ""}`}
+            } ${tab.id === "CHARTS" ? "ml-auto" : ""}`}
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             type="button"
@@ -213,6 +238,63 @@ export function PortfolioTablesTabs({
           deleteAction={deleteActivityLogAction}
         />
       )}
+
+      {activeTab === "CHARTS" && (
+        <PortfolioChartsWidget
+          baseCurrency={baseCurrency}
+          cashBalances={cashBalances}
+          exchanges={exchanges}
+          onPositionSelect={setChartSelectedPosition}
+          positions={positions}
+          valuationCashBalances={valuationCashBalances}
+          valuationPositions={valuationPositions}
+        />
+      )}
+
+      {chartSelectedPosition ? (
+        <PositionPlatformHoldingsModal
+          activityLogs={activityLogs}
+          onBuy={openChartBuyModal}
+          onClose={() => setChartSelectedPosition(null)}
+          onSell={openChartSellModal}
+          position={chartSelectedPosition}
+        />
+      ) : null}
+      {chartPositionToSell ? (
+        <PositionSellModal
+          action={sellPositionAction}
+          isOpen
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setChartPositionToSell(null);
+            }
+          }}
+          position={chartPositionToSell}
+          showTrigger={false}
+        />
+      ) : null}
+      {chartPositionToBuy ? (
+        <PositionFormModal
+          action={createPositionAction}
+          assetType={chartPositionToBuy.assetType}
+          baseCurrency={baseCurrency}
+          cashBalances={cashBalances}
+          exchangeOptions={
+            chartPositionToBuy.assetType === "CRYPTO"
+              ? cryptoExchangeOptions
+              : stockExchangeOptions
+          }
+          initialAsset={chartPositionToBuy}
+          isOpen
+          mode="create"
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setChartPositionToBuy(null);
+            }
+          }}
+          showTrigger={false}
+        />
+      ) : null}
     </section>
   );
 }
@@ -1396,10 +1478,10 @@ type PieSlice = {
   color: string;
 };
 
-function getSliceAtPointer(
+function getSliceAtPointer<TSlice extends { start: number; end: number }>(
   event: React.MouseEvent<HTMLDivElement>,
-  slices: PieSlice[],
-): PieSlice | null {
+  slices: TSlice[],
+): TSlice | null {
   if (slices.length === 0) {
     return null;
   }
@@ -1433,6 +1515,610 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-sm font-semibold text-zinc-950">{value}</p>
     </div>
   );
+}
+
+function PortfolioChartsWidget({
+  positions,
+  valuationPositions,
+  valuationCashBalances,
+  cashBalances,
+  exchanges,
+  baseCurrency,
+  onPositionSelect,
+}: {
+  positions: PortfolioPosition[];
+  valuationPositions: PositionValuation[];
+  valuationCashBalances: CashValuation[];
+  cashBalances: CashBalance[];
+  exchanges: PortfolioExchange[];
+  baseCurrency: string;
+  onPositionSelect: (position: PortfolioPosition) => void;
+}) {
+  const positionValueById = new Map(
+    valuationPositions.map((valuation) => [
+      valuation.id,
+      valuation.marketValue ?? 0,
+    ]),
+  );
+  const cashValueById = new Map(
+    valuationCashBalances.map((valuation) => [
+      valuation.id,
+      valuation.value ?? 0,
+    ]),
+  );
+  const cryptoValue = positions
+    .filter((position) => position.assetType === "CRYPTO")
+    .reduce(
+      (total, position) => total + (positionValueById.get(position.id) ?? 0),
+      0,
+    );
+  const stockValue = positions
+    .filter((position) => position.assetType === "STOCK" || position.assetType === "ETF")
+    .reduce(
+      (total, position) => total + (positionValueById.get(position.id) ?? 0),
+      0,
+    );
+  const cashValue = cashBalances.reduce(
+    (total, cashBalance) => total + (cashValueById.get(cashBalance.id) ?? 0),
+    0,
+  );
+  const exchangeCharts = getExchangeChartData({
+    cashBalances,
+    cashValueById,
+    exchanges,
+    positionValueById,
+    positions,
+  });
+
+  return (
+    <section className="grid gap-4">
+      <div className="rounded border border-zinc-200 bg-white">
+        <div className="border-b border-zinc-200 px-4 py-3">
+          <h2 className="text-sm font-semibold uppercase text-zinc-500">
+            Portfolio Charts
+          </h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            Allocation pies use available base-currency valuations.
+          </p>
+        </div>
+        <div className="grid auto-rows-fr gap-4 p-4 lg:grid-cols-3">
+          <PortfolioPieCard
+            baseCurrency={baseCurrency}
+            centerLabel="Total"
+            emptyText="No valued assets or cash to chart."
+            slices={getPortfolioChartSlices([
+              {
+                detail: `${positions.filter((position) => position.assetType === "CRYPTO").length} positions`,
+                label: "Crypto",
+                value: cryptoValue,
+              },
+              {
+                detail: `${positions.filter((position) => position.assetType === "STOCK" || position.assetType === "ETF").length} positions`,
+                label: "Stocks & ETF",
+                value: stockValue,
+              },
+              {
+                detail: `${cashBalances.length} balances`,
+                label: "Free cash",
+                value: cashValue,
+              },
+            ])}
+            title="All assets"
+          />
+          <PortfolioPieCard
+            baseCurrency={baseCurrency}
+            centerLabel="Stocks"
+            emptyText="No valued stock or ETF positions to chart."
+            onSliceSelect={(slice) => {
+              const position = positions.find(
+                (item) => item.id === slice.positionId,
+              );
+
+              if (position) {
+                onPositionSelect(position);
+              }
+            }}
+            slices={getPortfolioChartSlices(
+              positions
+                .filter(
+                  (position) =>
+                    position.assetType === "STOCK" ||
+                    position.assetType === "ETF",
+                )
+                .map((position) => ({
+                  label: position.symbol,
+                  positionId: position.id,
+                  value: positionValueById.get(position.id) ?? 0,
+                })),
+            )}
+            title="Stocks & ETF"
+          />
+          <PortfolioPieCard
+            baseCurrency={baseCurrency}
+            centerLabel="Crypto"
+            emptyText="No valued crypto positions to chart."
+            onSliceSelect={(slice) => {
+              const position = positions.find(
+                (item) => item.id === slice.positionId,
+              );
+
+              if (position) {
+                onPositionSelect(position);
+              }
+            }}
+            slices={getPortfolioChartSlices(
+              positions
+                .filter((position) => position.assetType === "CRYPTO")
+                .map((position) => ({
+                  label: position.symbol,
+                  positionId: position.id,
+                  value: positionValueById.get(position.id) ?? 0,
+                })),
+            )}
+            title="Crypto"
+          />
+        </div>
+      </div>
+
+      <div className="rounded border border-zinc-200 bg-white">
+        <div className="border-b border-zinc-200 px-4 py-3">
+          <h2 className="text-sm font-semibold uppercase text-zinc-500">
+            Exchange allocation
+          </h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            Each pie compares assets held on the platform with free cash there.
+          </p>
+        </div>
+        {exchangeCharts.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-zinc-600">
+            No exchange holdings or free cash to chart.
+          </p>
+        ) : (
+          <div className="grid auto-rows-fr gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+            {exchangeCharts.map((exchangeChart) => (
+              <PortfolioPieCard
+                baseCurrency={baseCurrency}
+                centerLabel={exchangeChart.type}
+                emptyText="No valued assets or cash on this exchange."
+                key={exchangeChart.platform}
+                onSliceSelect={(slice) => {
+                  const position = positions.find(
+                    (item) => item.id === slice.positionId,
+                  );
+
+                  if (position) {
+                    onPositionSelect(position);
+                  }
+                }}
+                slices={getPortfolioChartSlices([
+                  ...exchangeChart.assetSlices,
+                  {
+                    detail: `${exchangeChart.cashBalanceCount} balances`,
+                    label: "Free cash",
+                    value: exchangeChart.cashValue,
+                  },
+                ])}
+                subtitle={`${exchangeChart.assetCount} assets / ${formatMoney(exchangeChart.cashValue, baseCurrency)} free cash`}
+                title={exchangeChart.platform}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PortfolioPieCard({
+  title,
+  subtitle,
+  centerLabel,
+  slices,
+  baseCurrency,
+  emptyText,
+  onSliceSelect,
+}: {
+  title: string;
+  subtitle?: string;
+  centerLabel: string;
+  slices: PortfolioChartSlice[];
+  baseCurrency: string;
+  emptyText: string;
+  onSliceSelect?: (slice: PortfolioChartSlice) => void;
+}) {
+  const [tooltip, setTooltip] = useState<{
+    slice: PortfolioChartSlice;
+    x: number;
+    y: number;
+  } | null>(null);
+  const totalValue = slices.reduce((total, slice) => total + slice.value, 0);
+  const chartBackground =
+    slices.length === 0
+      ? "#e4e4e7"
+      : `conic-gradient(${slices
+          .map((slice) => `${slice.color} ${slice.start}% ${slice.end}%`)
+          .join(", ")})`;
+
+  return (
+    <article className="flex h-[430px] min-w-0 flex-col overflow-hidden rounded border border-zinc-200 bg-zinc-50 p-4">
+      <div className="flex min-h-12 shrink-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-semibold text-zinc-950" title={title}>
+            {title}
+          </h3>
+          <p className="mt-1 truncate text-xs text-zinc-500" title={subtitle}>
+            {subtitle ?? formatMoney(totalValue, baseCurrency)}
+          </p>
+        </div>
+        <span className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-600">
+          Pie
+        </span>
+      </div>
+
+      <div className="mt-4 grid h-full min-h-0 flex-1 grid-rows-[176px_minmax(0,1fr)] gap-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:grid-rows-1 lg:grid-cols-1 lg:grid-rows-[176px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)] xl:grid-rows-1">
+        <div
+          aria-label={`${title} pie chart`}
+          className={`relative mx-auto grid size-44 shrink-0 place-items-center rounded-full border border-zinc-200 ${
+            onSliceSelect ? "cursor-pointer" : ""
+          }`}
+          onMouseLeave={() => setTooltip(null)}
+          onMouseMove={(event) => {
+            const slice = getSliceAtPointer(event, slices);
+
+            if (!slice) {
+              setTooltip(null);
+              return;
+            }
+
+            setTooltip({
+              slice,
+              x: event.clientX,
+              y: event.clientY,
+            });
+          }}
+          onClick={(event) => {
+            const slice = getSliceAtPointer(event, slices);
+
+            if (slice?.positionId && onSliceSelect) {
+              onSliceSelect(slice);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (!onSliceSelect || event.key !== "Enter") {
+              return;
+            }
+
+            const firstPositionSlice = slices.find((slice) => slice.positionId);
+
+            if (firstPositionSlice) {
+              onSliceSelect(firstPositionSlice);
+            }
+          }}
+          tabIndex={onSliceSelect ? 0 : undefined}
+          role="img"
+          style={{ background: chartBackground }}
+        >
+          <div className="grid size-24 place-items-center rounded-full bg-white text-center shadow-sm">
+            <span className="text-[11px] font-medium uppercase text-zinc-500">
+              {centerLabel}
+            </span>
+            <span className="px-2 text-xs font-semibold text-zinc-950">
+              {formatLargeMoney(totalValue, baseCurrency)}
+            </span>
+          </div>
+          {tooltip ? (
+            <PortfolioChartTooltip
+              baseCurrency={baseCurrency}
+              slice={tooltip.slice}
+              x={tooltip.x}
+              y={tooltip.y}
+            />
+          ) : null}
+        </div>
+
+        <div className="min-h-0 min-w-0 self-stretch overflow-hidden">
+          {slices.length === 0 ? (
+            <p className="rounded border border-zinc-200 bg-white px-3 py-6 text-sm text-zinc-600">
+              {emptyText}
+            </p>
+          ) : (
+            <ul className="grid h-full min-h-0 content-start gap-2 overflow-y-auto pr-1">
+              {slices.map((slice) => (
+                <li key={slice.label}>
+                  <button
+                    className={`flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded border border-zinc-200 bg-white px-3 py-2 text-left hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 ${
+                      slice.positionId && onSliceSelect ? "cursor-pointer" : ""
+                    }`}
+                    onBlur={() => setTooltip(null)}
+                    onFocus={(event) =>
+                      setTooltip({
+                        slice,
+                        x: event.currentTarget.getBoundingClientRect().left,
+                        y: event.currentTarget.getBoundingClientRect().bottom,
+                      })
+                    }
+                    onMouseEnter={(event) =>
+                      setTooltip({
+                        slice,
+                        x: event.currentTarget.getBoundingClientRect().left,
+                        y: event.currentTarget.getBoundingClientRect().bottom,
+                      })
+                    }
+                    onMouseLeave={() => setTooltip(null)}
+                    onClick={() => {
+                      if (slice.positionId && onSliceSelect) {
+                        onSliceSelect(slice);
+                      }
+                    }}
+                    type="button"
+                  >
+                    <span className="min-w-0 overflow-hidden">
+                      <span className="flex items-center gap-2 text-sm font-medium text-zinc-950">
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: slice.color }}
+                        />
+                        <span className="truncate">{slice.label}</span>
+                      </span>
+                      {slice.detail ? (
+                        <span className="mt-1 block truncate text-xs text-zinc-500">
+                          {slice.detail}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 text-right text-xs text-zinc-600">
+                      <span className="block font-medium text-zinc-950">
+                        {formatMaybePercent(slice.share)}
+                      </span>
+                      <span>{formatLargeMoney(slice.value, baseCurrency)}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PortfolioChartTooltip({
+  slice,
+  baseCurrency,
+  x,
+  y,
+}: {
+  slice: PortfolioChartSlice;
+  baseCurrency: string;
+  x: number;
+  y: number;
+}) {
+  return (
+    <div
+      className="pointer-events-none fixed z-[80] rounded border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 shadow-lg"
+      style={{
+        left: x + 12,
+        top: y + 12,
+      }}
+    >
+      <div className="font-semibold text-zinc-950">{slice.label}</div>
+      <div>{formatMoney(slice.value, baseCurrency)}</div>
+      <div>{formatMaybePercent(slice.share)}</div>
+      {slice.detail ? <div className="text-zinc-500">{slice.detail}</div> : null}
+    </div>
+  );
+}
+
+type PortfolioChartSlice = {
+  label: string;
+  detail?: string;
+  positionId?: string;
+  value: number;
+  share: number;
+  start: number;
+  end: number;
+  color: string;
+};
+
+function getPortfolioChartSlices(
+  items: Array<{
+    label: string;
+    detail?: string;
+    positionId?: string;
+    value: number;
+  }>,
+): PortfolioChartSlice[] {
+  const valuedItems = items
+    .filter((item) => item.value > 0)
+    .sort((left, right) => right.value - left.value);
+  const totalValue = valuedItems.reduce((total, item) => total + item.value, 0);
+
+  if (totalValue <= 0) {
+    return [];
+  }
+
+  let cursor = 0;
+
+  return valuedItems.map((item, index) => {
+    const share = item.value / totalValue;
+    const start = cursor;
+    const end = index === valuedItems.length - 1 ? 100 : cursor + share * 100;
+
+    cursor = end;
+
+    return {
+      ...item,
+      share,
+      start,
+      end,
+      color: pieChartColors[index % pieChartColors.length],
+    };
+  });
+}
+
+function getExchangeChartData({
+  positions,
+  cashBalances,
+  exchanges,
+  positionValueById,
+  cashValueById,
+}: {
+  positions: PortfolioPosition[];
+  cashBalances: CashBalance[];
+  exchanges: PortfolioExchange[];
+  positionValueById: Map<string, number>;
+  cashValueById: Map<string, number>;
+}) {
+  const exchangeData = new Map<
+    string,
+    {
+      platform: string;
+      type: PortfolioExchange["type"] | "Mixed";
+      assetValue: number;
+      cashValue: number;
+      assetSlices: Map<
+        string,
+        {
+          label: string;
+          positionId: string;
+          value: number;
+        }
+      >;
+      assetIds: Set<string>;
+      cashBalanceCount: number;
+    }
+  >();
+
+  for (const exchange of exchanges) {
+    exchangeData.set(exchange.name, {
+      platform: exchange.name,
+      type: exchange.type,
+      assetValue: 0,
+      cashValue: 0,
+      assetSlices: new Map(),
+      assetIds: new Set(),
+      cashBalanceCount: 0,
+    });
+  }
+
+  for (const position of positions) {
+    const positionValue = positionValueById.get(position.id) ?? 0;
+
+    for (const holding of position.platformHoldings) {
+      const existing = getOrCreateExchangeData(
+        exchangeData,
+        holding.platform,
+        position.assetType === "CRYPTO" ? "CRYPTO" : "STOCK",
+      );
+      const quantityShare =
+        position.quantity > 0 ? holding.quantity / position.quantity : 0;
+
+      existing.assetValue += positionValue * quantityShare;
+      upsertExchangeAssetSlice(existing.assetSlices, {
+        label: position.symbol,
+        positionId: position.id,
+        value: positionValue * quantityShare,
+      });
+      existing.assetIds.add(position.id);
+    }
+  }
+
+  for (const cashBalance of cashBalances) {
+    const existing = getOrCreateExchangeData(
+      exchangeData,
+      cashBalance.platform,
+      "Mixed",
+    );
+
+    existing.cashValue += cashValueById.get(cashBalance.id) ?? 0;
+    existing.cashBalanceCount += 1;
+  }
+
+  return Array.from(exchangeData.values())
+    .map((item) => ({
+      ...item,
+      assetCount: item.assetIds.size,
+      assetSlices: Array.from(item.assetSlices.values()),
+    }))
+    .filter(
+      (item) =>
+        item.assetValue > 0 || item.cashValue > 0 || item.cashBalanceCount > 0,
+    )
+    .sort((left, right) => left.platform.localeCompare(right.platform));
+}
+
+function getOrCreateExchangeData(
+  exchangeData: Map<
+    string,
+    {
+      platform: string;
+      type: PortfolioExchange["type"] | "Mixed";
+      assetValue: number;
+      cashValue: number;
+      assetSlices: Map<
+        string,
+        {
+          label: string;
+          positionId: string;
+          value: number;
+        }
+      >;
+      assetIds: Set<string>;
+      cashBalanceCount: number;
+    }
+  >,
+  platform: string,
+  fallbackType: PortfolioExchange["type"] | "Mixed",
+) {
+  const existing = exchangeData.get(platform);
+
+  if (existing) {
+    if (existing.type !== fallbackType && fallbackType !== "Mixed") {
+      existing.type = "Mixed";
+    }
+
+    return existing;
+  }
+
+  const created = {
+    platform,
+    type: fallbackType,
+    assetValue: 0,
+    cashValue: 0,
+    assetSlices: new Map<string, { label: string; positionId: string; value: number }>(),
+    assetIds: new Set<string>(),
+    cashBalanceCount: 0,
+  };
+
+  exchangeData.set(platform, created);
+
+  return created;
+}
+
+function upsertExchangeAssetSlice(
+  assetSlices: Map<
+    string,
+    {
+      label: string;
+      positionId: string;
+      value: number;
+    }
+  >,
+  input: {
+    label: string;
+    positionId: string;
+    value: number;
+  },
+) {
+  const existing = assetSlices.get(input.positionId);
+
+  if (existing) {
+    existing.value += input.value;
+    return;
+  }
+
+  assetSlices.set(input.positionId, { ...input });
 }
 
 function CashTable({
