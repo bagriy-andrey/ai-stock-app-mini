@@ -23,14 +23,25 @@ type PositionActionValue = {
   notes: string | null;
 };
 
+type CashBalance = {
+  id: string;
+  platform: string;
+  currency: string;
+  amount: number;
+};
+
 export function PositionActionsMenu({
   position,
   baseCurrency,
+  cashBalances,
+  exchangeOptions,
   updateAction,
   deleteAction,
 }: {
   position: PositionActionValue;
   baseCurrency: string;
+  cashBalances: CashBalance[];
+  exchangeOptions: string[];
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -116,6 +127,8 @@ export function PositionActionsMenu({
             action={updateAction}
             assetType={position.assetType}
             baseCurrency={baseCurrency}
+            cashBalances={cashBalances}
+            exchangeOptions={exchangeOptions}
             mode="edit"
             position={position}
           />

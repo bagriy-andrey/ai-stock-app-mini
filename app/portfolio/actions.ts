@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
-import { calculateWeightedAverageCost } from "@/lib/portfolio/calculations";
+import {
+  calculatePurchaseCost,
+  calculateWeightedAverageCost,
+} from "@/lib/portfolio/calculations";
 import {
   getOrCreateDefaultPortfolio,
   upsertManualAsset,
@@ -21,71 +24,127 @@ const PORTFOLIO_PATH = "/portfolio";
 export async function createPosition(formData: FormData) {
   const input = positionFormSchema.parse(Object.fromEntries(formData));
   const portfolio = await getOrCreateDefaultPortfolio();
-  const asset = await upsertManualAsset({
-    symbol: input.symbol,
-    name: input.name,
-    assetType: input.assetType,
-    currency: input.assetCurrency,
-    exchange: input.exchange,
-    provider: input.provider,
-    providerSymbol: input.providerSymbol,
+  const purchaseCost = calculatePurchaseCost({
+    quantity: input.quantity,
+    averageCost: input.averageCost,
   });
 
-  const existingPosition = await prisma.position.findUnique({
-    where: {
-      portfolioId_assetId: {
-        portfolioId: portfolio.id,
-        assetId: asset.id,
-      },
-    },
-  });
-
-  if (!existingPosition) {
-    await prisma.position.create({
-      data: {
-        portfolioId: portfolio.id,
-        assetId: asset.id,
-        quantity: input.quantity,
-        averageCost: input.averageCost,
-        costCurrency: input.costCurrency,
-        investmentIntent: input.investmentIntent,
-        notes: input.notes,
-        openedAt: input.openedAt,
+  await prisma.$transaction(async (tx) => {
+    const cashBalance = await tx.cashBalance.findUnique({
+      where: {
+        portfolioId_platform_currency: {
+          portfolioId: portfolio.id,
+          platform: input.exchange,
+          currency: input.costCurrency,
+        },
       },
     });
 
-    revalidatePath(PORTFOLIO_PATH);
-    return;
-  }
+    if (cashBalance && cashBalance.amount.toNumber() < purchaseCost) {
+      throw new Error(
+        `Insufficient ${input.costCurrency} cash on ${input.exchange}. Available: ${cashBalance.amount.toNumber()}, required: ${purchaseCost}.`,
+      );
+    }
 
-  if (existingPosition.costCurrency !== input.costCurrency) {
-    throw new Error(
-      `Existing ${input.symbol} position uses ${existingPosition.costCurrency}. Edit the position manually before adding ${input.costCurrency} lots.`,
-    );
-  }
+    const asset = await tx.asset.upsert({
+      where: {
+        provider_providerSymbol: {
+          provider: input.provider,
+          providerSymbol: input.providerSymbol,
+        },
+      },
+      create: {
+        symbol: input.symbol,
+        name: input.name,
+        assetType: input.assetType,
+        currency: input.assetCurrency,
+        exchange: input.exchange,
+        provider: input.provider,
+        providerSymbol: input.providerSymbol,
+      },
+      update: {
+        name: input.name,
+        assetType: input.assetType,
+        currency: input.assetCurrency,
+        exchange: input.exchange,
+      },
+    });
 
-  const existingQuantity = existingPosition.quantity.toNumber();
-  const existingAverageCost = existingPosition.averageCost.toNumber();
-  const totalQuantity = existingQuantity + input.quantity;
-  const weightedAverageCost = calculateWeightedAverageCost({
-    existingQuantity,
-    existingAverageCost,
-    addedQuantity: input.quantity,
-    addedAverageCost: input.averageCost,
-  });
+    const existingPosition = await tx.position.findUnique({
+      where: {
+        portfolioId_assetId: {
+          portfolioId: portfolio.id,
+          assetId: asset.id,
+        },
+      },
+    });
 
-  await prisma.position.update({
-    where: {
-      id: existingPosition.id,
-    },
-    data: {
-      portfolioId: portfolio.id,
-      assetId: asset.id,
-      quantity: totalQuantity,
-      averageCost: weightedAverageCost,
-      costCurrency: input.costCurrency,
-      updatedAt: new Date(),
-    },
+    if (!existingPosition) {
+      await tx.position.create({
+        data: {
+          portfolioId: portfolio.id,
+          assetId: asset.id,
+          quantity: input.quantity,
+          averageCost: input.averageCost,
+          costCurrency: input.costCurrency,
+          investmentIntent: input.investmentIntent,
+          notes: input.notes,
+          openedAt: input.openedAt,
+        },
+      });
+    } else {
+      if (existingPosition.costCurrency !== input.costCurrency) {
+        throw new Error(
+          `Existing ${input.symbol} position uses ${existingPosition.costCurrency}. Edit the position manually before adding ${input.costCurrency} lots.`,
+        );
+      }
+
+      const existingQuantity = existingPosition.quantity.toNumber();
+      const existingAverageCost = existingPosition.averageCost.toNumber();
+      const totalQuantity = existingQuantity + input.quantity;
+      const weightedAverageCost = calculateWeightedAverageCost({
+        existingQuantity,
+        existingAverageCost,
+        addedQuantity: input.quantity,
+        addedAverageCost: input.averageCost,
+      });
+
+      await tx.position.update({
+        where: {
+          id: existingPosition.id,
+        },
+        data: {
+          portfolioId: portfolio.id,
+          assetId: asset.id,
+          quantity: totalQuantity,
+          averageCost: weightedAverageCost,
+          costCurrency: input.costCurrency,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    if (cashBalance) {
+      const cashUpdate = await tx.cashBalance.updateMany({
+        where: {
+          id: cashBalance.id,
+          amount: {
+            gte: purchaseCost,
+          },
+        },
+        data: {
+          amount: {
+            decrement: purchaseCost,
+          },
+        },
+      });
+
+      if (cashUpdate.count !== 1) {
+        throw new Error(
+          `Insufficient ${input.costCurrency} cash on ${input.exchange}. Refresh and try again.`,
+        );
+      }
+    }
   });
 
   revalidatePath(PORTFOLIO_PATH);

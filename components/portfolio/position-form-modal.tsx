@@ -23,6 +23,13 @@ type PositionFormValue = {
   notes: string | null;
 };
 
+type CashBalance = {
+  id: string;
+  platform: string;
+  currency: string;
+  amount: number;
+};
+
 const investmentIntents = ["LONG_TERM", "TACTICAL"] as const;
 
 export function PositionFormModal({
@@ -31,12 +38,16 @@ export function PositionFormModal({
   position,
   action,
   assetType,
+  cashBalances = [],
+  exchangeOptions = [],
 }: {
   mode: "create" | "edit";
   baseCurrency: string;
   position?: PositionFormValue;
   action: (formData: FormData) => Promise<void>;
   assetType?: AssetType;
+  cashBalances?: CashBalance[];
+  exchangeOptions?: string[];
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -45,6 +56,11 @@ export function PositionFormModal({
   const [costCurrency, setCostCurrency] = useState(
     position?.costCurrency ?? baseCurrency,
   );
+  const [selectedExchange, setSelectedExchange] = useState(
+    position?.exchange ?? "",
+  );
+  const [quantity, setQuantity] = useState(position?.quantity ?? 0);
+  const [averageCost, setAverageCost] = useState(position?.averageCost ?? 0);
   const [isCostCurrencyLocked, setIsCostCurrencyLocked] = useState(
     position?.provider !== undefined && position.provider !== "manual",
   );
@@ -53,11 +69,30 @@ export function PositionFormModal({
     type: "success" | "error";
   } | null>(null);
   const title = mode === "create" ? "Add position" : "Edit position";
+  const purchaseCost = quantity * averageCost;
+  const selectedCashBalance = cashBalances.find(
+    (cashBalance) =>
+      cashBalance.platform === selectedExchange &&
+      cashBalance.currency === costCurrency,
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const cashValidationError =
+      mode === "create"
+        ? getCashValidationError(formData, cashBalances)
+        : null;
+
+    if (cashValidationError) {
+      setToast({
+        message: cashValidationError,
+        type: "error",
+      });
+      window.setTimeout(() => setToast(null), 5000);
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -68,6 +103,9 @@ export function PositionFormModal({
         form.reset();
         setFormKey((current) => current + 1);
         setCostCurrency(baseCurrency);
+        setSelectedExchange("");
+        setQuantity(0);
+        setAverageCost(0);
         setIsCostCurrencyLocked(false);
       }
 
@@ -99,6 +137,9 @@ export function PositionFormModal({
         onClick={() => {
           if (mode === "create") {
             setCostCurrency(baseCurrency);
+            setSelectedExchange("");
+            setQuantity(0);
+            setAverageCost(0);
             setIsCostCurrencyLocked(false);
           }
 
@@ -141,11 +182,13 @@ export function PositionFormModal({
                 defaultProvider={position?.provider ?? "manual"}
                 defaultProviderSymbol={position?.providerSymbol ?? ""}
                 defaultSymbol={position?.symbol ?? ""}
+                exchangeOptions={exchangeOptions}
                 lockedAssetType={assetType}
                 onAssetCurrencyResolved={(currency, isLocked) => {
                   setCostCurrency(currency);
                   setIsCostCurrencyLocked(isLocked);
                 }}
+                onExchangeChange={setSelectedExchange}
               />
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -155,6 +198,9 @@ export function PositionFormModal({
                     defaultValue={position?.quantity ?? ""}
                     min="0"
                     name="quantity"
+                    onChange={(event) =>
+                      setQuantity(event.target.valueAsNumber || 0)
+                    }
                     required
                     step="any"
                     type="number"
@@ -166,6 +212,9 @@ export function PositionFormModal({
                     defaultValue={position?.averageCost ?? ""}
                     min="0"
                     name="averageCost"
+                    onChange={(event) =>
+                      setAverageCost(event.target.valueAsNumber || 0)
+                    }
                     required
                     step="any"
                     type="number"
@@ -207,6 +256,15 @@ export function PositionFormModal({
                   </select>
                 </Field>
               </div>
+
+              {mode === "create" ? (
+                <CashPreview
+                  balance={selectedCashBalance?.amount ?? null}
+                  currency={costCurrency}
+                  exchange={selectedExchange}
+                  purchaseCost={purchaseCost}
+                />
+              ) : null}
 
               <Field label="Operation date">
                 <input
@@ -252,6 +310,53 @@ export function PositionFormModal({
         </div>
       )}
     </>
+  );
+}
+
+function CashPreview({
+  exchange,
+  currency,
+  balance,
+  purchaseCost,
+}: {
+  exchange: string;
+  currency: string;
+  balance: number | null;
+  purchaseCost: number;
+}) {
+  const remainingBalance = balance === null ? null : balance - purchaseCost;
+
+  return (
+    <div className="grid gap-1 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+      <div className="flex items-center justify-between gap-3">
+        <span>Cash available</span>
+        <span className="font-medium text-zinc-950">
+          {exchange && balance !== null
+            ? formatMoney(balance, currency)
+            : "No matching balance"}
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span>Estimated spend</span>
+        <span className="font-medium text-zinc-950">
+          {formatMoney(purchaseCost, currency)}
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span>Cash after add</span>
+        <span
+          className={`font-medium ${
+            remainingBalance !== null && remainingBalance < 0
+              ? "text-red-700"
+              : "text-zinc-950"
+          }`}
+        >
+          {remainingBalance === null
+            ? "N/A"
+            : formatMoney(remainingBalance, currency)}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -302,6 +407,61 @@ function formatInputDate(value: Date | null): string {
   const date = value ?? new Date();
 
   return date.toISOString().slice(0, 10);
+}
+
+function formatMoney(value: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      currency,
+      maximumFractionDigits: 2,
+      style: "currency",
+    }).format(value);
+  } catch {
+    return `${formatNumber(value)} ${currency}`;
+  }
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 8,
+  }).format(value);
+}
+
+function getCashValidationError(
+  formData: FormData,
+  cashBalances: CashBalance[],
+): string | null {
+  const exchange = getFormString(formData, "exchange");
+  const currency = getFormString(formData, "costCurrency").toUpperCase();
+  const quantity = getFormNumber(formData, "quantity");
+  const averageCost = getFormNumber(formData, "averageCost");
+  const purchaseCost = quantity * averageCost;
+  const cashBalance = cashBalances.find(
+    (balance) =>
+      balance.platform === exchange && balance.currency === currency,
+  );
+
+  if (!exchange || !currency || !Number.isFinite(purchaseCost)) {
+    return null;
+  }
+
+  if (cashBalance && purchaseCost > cashBalance.amount) {
+    return `Cannot add position: ${formatMoney(purchaseCost, currency)} exceeds ${formatMoney(cashBalance.amount, currency)} available on ${exchange}.`;
+  }
+
+  return null;
+}
+
+function getFormString(formData: FormData, name: string): string {
+  const value = formData.get(name);
+
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getFormNumber(formData: FormData, name: string): number {
+  const value = getFormString(formData, name);
+
+  return Number(value);
 }
 
 function getErrorMessage(error: unknown): string {

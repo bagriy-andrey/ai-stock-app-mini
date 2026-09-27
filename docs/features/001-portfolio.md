@@ -50,6 +50,7 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 
 - User adds a position
 - User adds an already-owned asset and the system increases quantity while recalculating weighted average cost
+- User selects or enters the position exchange/platform, sees matching free cash for the cost currency when it exists, and the system deducts purchase cost from that cash balance when the position is added
 - User edits quantity or average price
 - User removes a position
 - User adds cash for an existing platform/currency and the system increases that balance
@@ -63,6 +64,8 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - Zero or partial position
 - Duplicate ticker with different intent
 - Asset symbol changes
+- Missing free cash for a new exchange/platform
+- Insufficient free cash on an existing exchange/platform and cost currency
 
 ## Dependencies
 

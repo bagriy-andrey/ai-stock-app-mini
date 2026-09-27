@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SUPPORTED_PORTFOLIO_CURRENCIES } from "@/lib/portfolio/currencies";
 
@@ -16,16 +16,23 @@ export function CashFormModal({
   baseCurrency,
   cashBalance,
   action,
+  exchangeOptions = [],
 }: {
   mode: "create" | "edit";
   baseCurrency: string;
   cashBalance?: CashValue;
   action: (formData: FormData) => Promise<void>;
+  exchangeOptions?: string[];
 }) {
   const router = useRouter();
+  const exchangeListId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const title = mode === "create" ? "Add cash" : "Edit cash";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -42,7 +49,21 @@ export function CashFormModal({
         setFormKey((current) => current + 1);
       }
       setIsOpen(false);
+      setToast({
+        message:
+          mode === "create"
+            ? "Cash added successfully."
+            : "Cash updated successfully.",
+        type: "success",
+      });
       router.refresh();
+      window.setTimeout(() => setToast(null), 3500);
+    } catch (error) {
+      setToast({
+        message: getErrorMessage(error),
+        type: "error",
+      });
+      window.setTimeout(() => setToast(null), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -57,6 +78,9 @@ export function CashFormModal({
       >
         {mode === "create" ? "Add Cash" : "Edit"}
       </button>
+
+      {toast && <Toast message={toast.message} type={toast.type} />}
+
       {isOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/40 px-4 py-6">
           <div className="w-full max-w-md rounded border border-zinc-200 bg-white shadow-xl">
@@ -84,17 +108,26 @@ export function CashFormModal({
               ) : null}
               <p className="text-xs leading-5 text-zinc-500">
                 {mode === "create"
-                  ? "If the same platform and currency already exist, this amount will be added to the current cash balance."
+                  ? "If the same exchange and currency already exist, this amount will be added to the current cash balance."
                   : "Editing replaces this cash balance amount."}
               </p>
-              <Field label="Platform">
+              <Field label="Exchange">
                 <input
+                  autoComplete="off"
                   className={inputClassName}
                   defaultValue={cashBalance?.platform ?? ""}
+                  list={exchangeOptions.length > 0 ? exchangeListId : undefined}
                   name="platform"
                   placeholder="Revolut, IBKR, Binance..."
                   required
                 />
+                {exchangeOptions.length > 0 ? (
+                  <datalist id={exchangeListId}>
+                    {exchangeOptions.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                ) : null}
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Currency">
@@ -148,6 +181,26 @@ export function CashFormModal({
   );
 }
 
+function Toast({
+  message,
+  type,
+}: {
+  message: string;
+  type: "success" | "error";
+}) {
+  return (
+    <div
+      className={`fixed right-5 top-5 z-[60] rounded border px-4 py-3 text-sm font-medium shadow-lg ${
+        type === "success"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+          : "border-red-200 bg-red-50 text-red-900"
+      }`}
+    >
+      {message}
+    </div>
+  );
+}
+
 function Field({
   label,
   children,
@@ -161,6 +214,14 @@ function Field({
       {children}
     </label>
   );
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Unable to save cash.";
 }
 
 const inputClassName =

@@ -34,7 +34,7 @@ describe("portfolio form validation", () => {
     });
   });
 
-  it("rejects negative position quantities and costs", () => {
+  it("rejects negative position quantities, costs, and missing exchange", () => {
     expect(() =>
       positionFormSchema.parse({
         symbol: "SPY",
@@ -64,6 +64,24 @@ describe("portfolio form validation", () => {
         providerSymbol: "SPY",
         quantity: "1",
         averageCost: "-400",
+        costCurrency: "USD",
+        investmentIntent: InvestmentIntent.LONG_TERM,
+        openedAt: "2026-09-27",
+        notes: "",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      positionFormSchema.parse({
+        symbol: "SPY",
+        name: "SPDR S&P 500 ETF Trust",
+        assetType: AssetType.ETF,
+        assetCurrency: "USD",
+        exchange: "",
+        provider: "manual",
+        providerSymbol: "SPY",
+        quantity: "1",
+        averageCost: "400",
         costCurrency: "USD",
         investmentIntent: InvestmentIntent.LONG_TERM,
         openedAt: "2026-09-27",

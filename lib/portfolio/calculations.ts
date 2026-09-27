@@ -61,6 +61,13 @@ export function calculateCostBasis(
   return position.quantity * position.averageCost;
 }
 
+export function calculatePurchaseCost(input: {
+  quantity: number;
+  averageCost: number;
+}): number {
+  return input.quantity * input.averageCost;
+}
+
 export function calculateWeightedAverageCost(input: {
   existingQuantity: number;
   existingAverageCost: number;

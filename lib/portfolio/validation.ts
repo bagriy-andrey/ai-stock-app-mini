@@ -14,6 +14,8 @@ const optionalTextSchema = z
   .trim()
   .transform((value) => (value.length === 0 ? null : value));
 
+const exchangeSchema = z.string().trim().min(1).max(80);
+
 const nonNegativeNumberSchema = z.coerce.number().finite().nonnegative();
 const supportedCurrencySchema = z
   .string()
@@ -27,7 +29,7 @@ export const positionFormSchema = z.object({
   name: z.string().trim().min(1).max(120),
   assetType: z.nativeEnum(AssetType),
   assetCurrency: supportedCurrencySchema,
-  exchange: optionalTextSchema,
+  exchange: exchangeSchema,
   provider: z
     .string()
     .trim()

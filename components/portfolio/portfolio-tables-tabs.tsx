@@ -74,6 +74,7 @@ export function PortfolioTablesTabs({
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("CRYPTO");
+  const exchangeOptions = getExchangeOptions(positions, cashBalances);
 
   return (
     <section className="grid gap-4">
@@ -101,12 +102,16 @@ export function PortfolioTablesTabs({
               action={createPositionAction}
               assetType="CRYPTO"
               baseCurrency={baseCurrency}
+              cashBalances={cashBalances}
+              exchangeOptions={exchangeOptions}
               mode="create"
             />
           }
           baseCurrency={baseCurrency}
+          cashBalances={cashBalances}
           deleteAction={deletePositionAction}
           emptyText="No crypto positions yet."
+          exchangeOptions={exchangeOptions}
           positions={positions.filter((position) => position.assetType === "CRYPTO")}
           title="Crypto"
           updateAction={updatePositionAction}
@@ -121,12 +126,16 @@ export function PortfolioTablesTabs({
               action={createPositionAction}
               assetType="STOCK"
               baseCurrency={baseCurrency}
+              cashBalances={cashBalances}
+              exchangeOptions={exchangeOptions}
               mode="create"
             />
           }
           baseCurrency={baseCurrency}
+          cashBalances={cashBalances}
           deleteAction={deletePositionAction}
           emptyText="No stock positions yet."
+          exchangeOptions={exchangeOptions}
           positions={positions.filter((position) => position.assetType === "STOCK")}
           title="Stocks"
           updateAction={updatePositionAction}
@@ -141,12 +150,16 @@ export function PortfolioTablesTabs({
               action={createPositionAction}
               assetType="ETF"
               baseCurrency={baseCurrency}
+              cashBalances={cashBalances}
+              exchangeOptions={exchangeOptions}
               mode="create"
             />
           }
           baseCurrency={baseCurrency}
+          cashBalances={cashBalances}
           deleteAction={deletePositionAction}
           emptyText="No ETF positions yet."
+          exchangeOptions={exchangeOptions}
           positions={positions.filter((position) => position.assetType === "ETF")}
           title="ETF"
           updateAction={updatePositionAction}
@@ -159,6 +172,7 @@ export function PortfolioTablesTabs({
           baseCurrency={baseCurrency}
           cashBalances={cashBalances}
           deleteAction={deleteCashBalanceAction}
+          exchangeOptions={exchangeOptions}
           upsertAction={upsertCashBalanceAction}
         />
       )}
@@ -171,6 +185,8 @@ function PositionsTable({
   positions,
   valuationPositions,
   baseCurrency,
+  cashBalances,
+  exchangeOptions,
   emptyText,
   addButton,
   updateAction,
@@ -180,6 +196,8 @@ function PositionsTable({
   positions: PortfolioPosition[];
   valuationPositions: PositionValuation[];
   baseCurrency: string;
+  cashBalances: CashBalance[];
+  exchangeOptions: string[];
   emptyText: string;
   addButton: React.ReactNode;
   updateAction: (formData: FormData) => Promise<void>;
@@ -279,7 +297,9 @@ function PositionsTable({
                     <td className="px-4 py-3 align-top">
                       <PositionActionsMenu
                         baseCurrency={baseCurrency}
+                        cashBalances={cashBalances}
                         deleteAction={deleteAction}
+                        exchangeOptions={exchangeOptions}
                         position={position}
                         updateAction={updateAction}
                       />
@@ -298,11 +318,13 @@ function PositionsTable({
 function CashTable({
   cashBalances,
   baseCurrency,
+  exchangeOptions,
   upsertAction,
   deleteAction,
 }: {
   cashBalances: CashBalance[];
   baseCurrency: string;
+  exchangeOptions: string[];
   upsertAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -320,6 +342,7 @@ function CashTable({
         <CashFormModal
           action={upsertAction}
           baseCurrency={baseCurrency}
+          exchangeOptions={exchangeOptions}
           mode="create"
         />
       </div>
@@ -332,7 +355,7 @@ function CashTable({
           <table className="w-full min-w-[620px] text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
               <tr>
-                <th className="px-4 py-3 font-semibold">Platform</th>
+                <th className="px-4 py-3 font-semibold">Exchange</th>
                 <th className="px-4 py-3 font-semibold">Currency</th>
                 <th className="px-4 py-3 font-semibold">Amount</th>
                 <th className="px-4 py-3 font-semibold">Actions</th>
@@ -353,6 +376,7 @@ function CashTable({
                       baseCurrency={baseCurrency}
                       cashBalance={cashBalance}
                       deleteAction={deleteAction}
+                      exchangeOptions={exchangeOptions}
                       updateAction={upsertAction}
                     />
                   </td>
@@ -413,4 +437,20 @@ function formatDisplayDate(value: Date | null): string {
   }
 
   return new Intl.DateTimeFormat("en-GB").format(value);
+}
+
+function getExchangeOptions(
+  positions: PortfolioPosition[],
+  cashBalances: CashBalance[],
+): string[] {
+  return Array.from(
+    new Set(
+      [
+        ...positions.map((position) => position.exchange ?? ""),
+        ...cashBalances.map((cashBalance) => cashBalance.platform),
+      ]
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ).sort((left, right) => left.localeCompare(right));
 }

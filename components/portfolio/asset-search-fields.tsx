@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import type { AssetType } from "@prisma/client";
 import {
   SUPPORTED_PORTFOLIO_CURRENCIES,
@@ -28,7 +28,9 @@ export function AssetSearchFields({
   defaultProvider = "manual",
   defaultProviderSymbol = "",
   lockedAssetType,
+  exchangeOptions = [],
   onAssetCurrencyResolved,
+  onExchangeChange,
 }: {
   defaultAssetType?: AssetType;
   defaultSymbol?: string;
@@ -38,8 +40,11 @@ export function AssetSearchFields({
   defaultProvider?: string;
   defaultProviderSymbol?: string;
   lockedAssetType?: AssetType;
+  exchangeOptions?: string[];
   onAssetCurrencyResolved?: (currency: string, isLocked: boolean) => void;
+  onExchangeChange?: (exchange: string) => void;
 }) {
+  const exchangeListId = useId();
   const [assetType, setAssetType] = useState<AssetType>(
     lockedAssetType ?? defaultAssetType,
   );
@@ -110,6 +115,7 @@ export function AssetSearchFields({
     setSymbol("");
     setName("");
     setExchange("");
+    onExchangeChange?.("");
     setProvider("manual");
     setProviderSymbol("");
     setResults([]);
@@ -133,6 +139,7 @@ export function AssetSearchFields({
     setAssetCurrency(nextCurrency);
     setIsAssetCurrencyLocked(shouldLockCurrency);
     setExchange(result.exchange ?? "");
+    onExchangeChange?.(result.exchange ?? "");
     setProvider(result.provider);
     setProviderSymbol(result.providerSymbol);
     setResults([]);
@@ -257,11 +264,24 @@ export function AssetSearchFields({
         </Field>
         <Field label="Exchange">
           <input
+            autoComplete="off"
             className={inputClassName}
+            list={exchangeOptions.length > 0 ? exchangeListId : undefined}
             name="exchange"
-            onChange={(event) => setExchange(event.target.value)}
+            onChange={(event) => {
+              setExchange(event.target.value);
+              onExchangeChange?.(event.target.value);
+            }}
+            required
             value={exchange}
           />
+          {exchangeOptions.length > 0 ? (
+            <datalist id={exchangeListId}>
+              {exchangeOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          ) : null}
         </Field>
       </div>
     </div>

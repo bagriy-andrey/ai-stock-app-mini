@@ -15,11 +15,13 @@ type CashValue = {
 export function CashActionsMenu({
   cashBalance,
   baseCurrency,
+  exchangeOptions,
   updateAction,
   deleteAction,
 }: {
   cashBalance: CashValue;
   baseCurrency: string;
+  exchangeOptions: string[];
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -105,6 +107,7 @@ export function CashActionsMenu({
             action={updateAction}
             baseCurrency={baseCurrency}
             cashBalance={cashBalance}
+            exchangeOptions={exchangeOptions}
             mode="edit"
           />
           <ConfirmDeleteButton

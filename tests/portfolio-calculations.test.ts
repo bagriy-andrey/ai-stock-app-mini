@@ -3,6 +3,7 @@ import {
   calculateCostBasis,
   calculateMarketValue,
   calculatePortfolioValuation,
+  calculatePurchaseCost,
   calculateUnrealizedPnl,
   calculateUnrealizedPnlPercent,
   calculateWeight,
@@ -19,6 +20,15 @@ describe("portfolio calculations", () => {
         addedAverageCost: 65_000,
       }),
     ).toBeCloseTo(60_000);
+  });
+
+  it("calculates purchase cash spend", () => {
+    expect(
+      calculatePurchaseCost({
+        quantity: 3.5,
+        averageCost: 20,
+      }),
+    ).toBe(70);
   });
 
   it("calculates position value, cost basis, P&L, and weights", () => {

@@ -165,6 +165,10 @@ Phase 1 does not support margin, short positions, negative cash, or liability mo
 
 Free cash is stored by platform and currency so balances can be separated across brokerages, exchanges, and bank accounts. Phase 1 UI limits cash currency selection to USD, EUR, and PLN.
 
+### Deduct cash when adding portfolio positions
+
+Adding a real portfolio position requires an exchange/platform. The add-position flow shows the available cash for the selected exchange/platform and currency when a matching balance exists, then deducts `quantity * averageCost` from that cash balance in the same transaction that creates or increases the position. If the user enters a new exchange/platform without a matching cash balance yet, the position can still be added and no cash movement is inferred. Editing an existing position remains a manual correction workflow and does not infer cash movements.
+
 ### Store latest price snapshots through MarketPrice
 
 Phase 1A adds normalized market price snapshots with provider provenance. The first UI workflows may use manual or mock prices before real provider integrations are selected.
