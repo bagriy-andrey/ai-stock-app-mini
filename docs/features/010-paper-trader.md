@@ -19,6 +19,8 @@ The user can observe what would happen if the AI followed its own recommendation
 - Risk constraints
 - Strategy metrics
 - Benchmark comparison
+- Multiple paper strategies running in parallel
+- Comparison by agent, model, strategy, horizon, and asset type
 
 ## Non-Goals
 
@@ -26,6 +28,7 @@ The user can observe what would happen if the AI followed its own recommendation
 - Real order execution
 - Using real portfolio cash
 - Reinforcement learning in early phases
+- Using virtual trading results as proof that real trades should be executed automatically
 
 ## Inputs
 
@@ -52,6 +55,8 @@ The user can observe what would happen if the AI followed its own recommendation
 - PaperStrategy
 - RiskConstraint
 - PaperPerformanceMetric
+- PaperStrategyRun
+- PaperModelAssignment
 
 ## Main Flows
 
@@ -60,6 +65,8 @@ The user can observe what would happen if the AI followed its own recommendation
 - Trade is recorded in ledger
 - Virtual portfolio and metrics update
 - User compares strategy against benchmark
+- Multiple strategies consume the same forecast stream independently
+- User compares performance across strategies, agents, and model configurations
 
 ## Edge Cases
 
@@ -68,6 +75,8 @@ The user can observe what would happen if the AI followed its own recommendation
 - Stop loss or exit trigger
 - Missing current price
 - Strategy exceeds risk limits
+- Two strategies using the same forecast but different models produce conflicting trades
+- Strategy overfits to a short history of predictions
 
 ## Dependencies
 
@@ -75,6 +84,7 @@ The user can observe what would happen if the AI followed its own recommendation
 - Market data
 - Outcome evaluation
 - Portfolio metrics
+- Model routing and AI usage records
 
 ## Acceptance Criteria
 
@@ -82,6 +92,8 @@ The user can observe what would happen if the AI followed its own recommendation
 - All mock trades are recorded
 - Virtual P&L and benchmark comparison are visible
 - Risk limits are enforced
+- Paper strategies can be evaluated independently
+- Performance can be compared by model, agent, and strategy configuration
 
 ## Open Questions
 
@@ -93,4 +105,3 @@ The user can observe what would happen if the AI followed its own recommendation
 - Multiple strategies: conservative, balanced, aggressive, momentum, mean reversion, crypto tactical
 - Strategy comparison
 - Holding period analytics
-

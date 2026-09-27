@@ -95,3 +95,37 @@ Persist versions for reproducibility:
 - forecast version
 - data provider version
 
+## Market Data Provenance
+
+Market data and external signals should preserve provenance:
+
+- provider
+- provider endpoint or dataset
+- provider symbol/id
+- observed timestamp
+- ingestion timestamp
+- source publication timestamp when applicable
+- data freshness status
+- raw payload reference or normalized snapshot hash when useful
+
+This is required for point-in-time correctness, reproducible forecast evaluation, and later provider quality comparisons.
+
+## Reports and Translations
+
+Reports should store:
+
+- original language
+- original report content
+- generated timestamp
+- model and prompt version
+- source analysis/report run
+
+Report translations should be generated on demand through OpenRouter and cached with:
+
+- target language
+- translated content
+- translation model
+- translation timestamp
+- source report version
+
+The original report remains the canonical record.

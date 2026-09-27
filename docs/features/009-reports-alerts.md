@@ -12,6 +12,12 @@ The user receives timely information about material changes without constantly c
 
 - Morning brief
 - Evening brief
+- Intraday/as-needed reports
+- Daily reports
+- Weekly reports
+- Monthly reports
+- Quarterly reports
+- Yearly reports
 - Portfolio alerts
 - Watchlist alerts
 - Opportunity alerts
@@ -19,12 +25,15 @@ The user receives timely information about material changes without constantly c
 - Changed-thesis alerts
 - Telegram delivery first
 - Web dashboard history
+- Store reports in their original generated language
+- On-demand report translation through OpenRouter with cached translations
 
 ## Non-Goals
 
 - Many notification channels initially
 - Noisy low-value alerts
 - Guaranteed real-time delivery
+- Regenerating translated reports on every page view
 
 ## Inputs
 
@@ -40,6 +49,7 @@ The user receives timely information about material changes without constantly c
 - Reports
 - Alerts
 - Notification delivery records
+- Cached report translations
 
 ## Core Data / Entities
 
@@ -56,6 +66,8 @@ The user receives timely information about material changes without constantly c
 - Alert is persisted
 - Notification is delivered if configured
 - User views alert/report history
+- User opens a report and requests translation
+- System translates through OpenRouter, stores the translated version, and reuses it on later views
 
 ## Edge Cases
 
@@ -64,6 +76,8 @@ The user receives timely information about material changes without constantly c
 - Stale data
 - Alert storm during volatile market
 - Conflicting analysis updates
+- Translation model failure
+- Original report updated after a translation was cached
 
 ## Dependencies
 
@@ -71,12 +85,16 @@ The user receives timely information about material changes without constantly c
 - Telegram integration
 - AI analysis
 - Market data
+- OpenRouter model routing
 
 ## Acceptance Criteria
 
 - Reports are persisted and visible in the app
 - Critical alerts can be delivered through Telegram
 - Alert severity and source are clear
+- Reports can be generated on daily, weekly, monthly, quarterly, and yearly cadence
+- Original report content is preserved
+- Translations are generated on demand and cached by report version and target language
 
 ## Open Questions
 
@@ -88,4 +106,3 @@ The user receives timely information about material changes without constantly c
 - Email or push notifications
 - User-configurable alert rules
 - Alert feedback controls
-

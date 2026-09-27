@@ -56,21 +56,27 @@ Unresolved: exact boundary between application API and Python FastAPI AI service
 
 Unresolved: Node-side BullMQ vs Python worker stack such as Celery/RQ.
 
-### Market data providers
+### Market data provider plan details
 
-Unresolved: exact providers for stocks, ETFs, crypto prices, fundamentals, news, sentiment, derivatives, and on-chain metrics.
+Partially resolved: the initial provider strategy is FMP, CoinGecko, FRED/ALFRED, SEC EDGAR, GDELT, and optional Marketaux. CoinGlass is the first planned tactical crypto upgrade. Tiingo and EODHD remain fallback candidates.
+
+Unresolved: exact FMP plan, exact endpoint coverage, initial historical backfill depth, Marketaux upgrade threshold, and when advanced providers such as Glassnode, CryptoQuant, or Santiment become worth the cost.
 
 ### Database extensions
 
-Unresolved: plain PostgreSQL initially vs TimescaleDB for time-series workloads.
+Resolved for MVP: use plain PostgreSQL initially.
+
+Future option: add TimescaleDB for time-series workloads if market data volume and query patterns justify it. Add pgvector if embeddings or reflection memory need vector search.
 
 ### Initial OpenRouter models
 
 Unresolved: exact model choices for `cheap`, `standard`, and `strong` tiers.
 
-### Deployment assumptions
+### Deployment details
 
-Unresolved: hosting target, environment strategy, secrets management, and background worker deployment model.
+Partially resolved: target deployment is a personal self-hosted single-user application.
+
+Unresolved: exact server shape, environment strategy, secrets management, and background worker deployment model.
 
 ## Phase 0 Decisions
 
@@ -93,3 +99,42 @@ The initial foundation uses `prisma` and `@prisma/client` 6.x. The newer Prisma 
 ### Use webpack for Next.js dev/build initially
 
 Next.js 16 defaults to Turbopack, but Turbopack failed in the local environment while processing CSS. The Phase 0 `dev` and `build` scripts use webpack for stable local development and verification.
+
+### Use PostgreSQL as the primary database
+
+PostgreSQL is the primary application database. The project needs relational consistency, joins, historical records, analytics, and reproducible forecast evaluation across portfolio, watchlist, market data, predictions, reports, AI usage, and paper trading records.
+
+Optional future extensions may include TimescaleDB for time-series workloads and pgvector for embeddings or reflection memory. NoSQL databases are not the primary storage choice for the MVP.
+
+### Target single-user self-hosted deployment
+
+The application is intended for personal self-hosted use by one user. The architecture should not optimize early for multi-tenant SaaS concerns, public redistribution, or third-party API access.
+
+Provider abstractions are still required, but ingestion can be optimized around the user's portfolio, watchlist, and configured discovery universe instead of collecting the entire market at high frequency.
+
+### Initial market data provider strategy
+
+Use a provider abstraction, but start with a practical personal-use provider stack:
+
+- FMP as the initial primary provider for US stock/ETF prices, fundamentals, calendars, estimates, and financial news if the selected plan covers the required endpoints.
+- CoinGecko for crypto spot prices and history.
+- FRED/ALFRED for macroeconomic data and point-in-time macro vintages.
+- SEC EDGAR for primary company filings.
+- GDELT for global and geopolitical event intelligence.
+- Marketaux as an optional financial-news provider, starting with the free tier and upgrading only if needed.
+
+Keep Tiingo and EODHD as fallback candidates if FMP coverage, pricing, licensing, or data quality is insufficient.
+
+Add CoinGlass Hobbyist as the first paid tactical crypto upgrade when crypto derivatives data becomes useful. Defer Glassnode, CryptoQuant, and Santiment until outcome evaluation shows that advanced on-chain or social metrics improve forecast quality enough to justify the cost.
+
+### Store reports in original language and translate on demand
+
+Persist AI reports in their original generated language. Report detail pages should support on-demand translation through OpenRouter using a cost-effective translation-capable model. Translations should be cached so the same report is not translated repeatedly.
+
+### Support Russian and English UI
+
+The application should support Russian and English UI language switching. This is a durable product requirement and should be considered before building large user-facing flows.
+
+### Support multiple model and strategy comparisons
+
+Predictions, AI usage tracking, and Paper Trader workflows should support comparing different OpenRouter models, agents, and strategy configurations over time. The system should preserve enough metadata to evaluate quality, cost, latency, prediction accuracy, and paper-trading performance by model and strategy.

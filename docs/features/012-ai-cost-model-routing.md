@@ -12,6 +12,7 @@ The user can benefit from strong models where useful while keeping spend visible
 
 - OpenRouter integration
 - Logical model tiers: `cheap`, `standard`, `strong`
+- Task profiles for analysis, forecasting, reflection, translation, and paper-trading decisions
 - Model fallback routing
 - AI call persistence
 - Cost, token, and latency tracking
@@ -54,6 +55,8 @@ The user can benefit from strong models where useful while keeping spend visible
 - Router falls back on failure
 - Usage is persisted
 - Dashboard aggregates spend by month, agent, and model
+- Report translation requests use a cost-effective configured model and cache translated output
+- Strategy and model experiments are tagged so prediction and paper-trading outcomes can be compared later
 
 ## Edge Cases
 
@@ -75,15 +78,17 @@ The user can benefit from strong models where useful while keeping spend visible
 - AI usage is persisted with cost and latency
 - Fallbacks are supported
 - Monthly cost can be summarized
+- Translation usage is tracked separately from analysis and forecasting usage
+- Prediction and Paper Trader records can be grouped by model, agent, and strategy configuration
 
 ## Open Questions
 
 - Which initial models should back each tier?
 - What monthly budget guardrails should be enforced?
+- Which cost-effective model should be used first for report translation?
 
 ## Future Extensions
 
 - Automatic tier recommendations
 - Per-agent budget limits
 - Quality per dollar ranking
-
