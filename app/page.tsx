@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExchangeRatesWidget } from "@/components/market-data/exchange-rates-widget";
 
 const modules = [
   { href: "/portfolio", label: "Portfolio" },
@@ -40,6 +41,8 @@ export default function Home() {
             <p className="mt-2 text-xl font-semibold">Paper only</p>
           </div>
         </section>
+
+        <ExchangeRatesWidget />
 
         <section>
           <h2 className="text-sm font-semibold uppercase text-zinc-500">
