@@ -160,7 +160,7 @@ export function PositionFormModal({
                     type="number"
                   />
                 </Field>
-                <Field label="Avg cost">
+                <Field label="Avg cost per unit">
                   <input
                     className={inputClassName}
                     defaultValue={position?.averageCost ?? ""}

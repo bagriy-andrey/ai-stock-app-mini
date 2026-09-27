@@ -118,6 +118,8 @@ Recommended fields:
 MVP assumption:
 
 - Store average cost only. Do not model tax lots in Phase 1.
+- Treat repeat adds for the same portfolio asset as additional buys: increase quantity and recalculate weighted average cost.
+- Treat edit as a manual correction of the aggregated position values.
 
 Constraints:
 
@@ -142,6 +144,7 @@ MVP assumption:
 
 - Support multiple currencies in storage, but calculate full portfolio value primarily in the portfolio base currency.
 - If FX conversion is unavailable, show the cash line but mark base-currency total as partially unavailable.
+- Treat repeat adds for the same platform and currency as cash deposits that increase the stored balance. Editing an existing cash row replaces the stored balance.
 
 ### WatchlistItem
 

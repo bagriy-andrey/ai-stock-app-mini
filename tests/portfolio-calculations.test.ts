@@ -6,9 +6,21 @@ import {
   calculateUnrealizedPnl,
   calculateUnrealizedPnlPercent,
   calculateWeight,
+  calculateWeightedAverageCost,
 } from "@/lib/portfolio/calculations";
 
 describe("portfolio calculations", () => {
+  it("calculates weighted average cost for repeated purchases", () => {
+    expect(
+      calculateWeightedAverageCost({
+        existingQuantity: 0.1,
+        existingAverageCost: 50_000,
+        addedQuantity: 0.2,
+        addedAverageCost: 65_000,
+      }),
+    ).toBeCloseTo(60_000);
+  });
+
   it("calculates position value, cost basis, P&L, and weights", () => {
     const valuation = calculatePortfolioValuation({
       baseCurrency: "usd",

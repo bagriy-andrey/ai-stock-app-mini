@@ -49,8 +49,10 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 ## Main Flows
 
 - User adds a position
+- User adds an already-owned asset and the system increases quantity while recalculating weighted average cost
 - User edits quantity or average price
 - User removes a position
+- User adds cash for an existing platform/currency and the system increases that balance
 - System refreshes prices
 - System recalculates value, P&L, and weights
 
@@ -78,7 +80,8 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 ## Open Questions
 
 - How should multi-currency cash balances be represented initially?
-- Should position lots be tracked in MVP or only average price?
+
+Resolved for MVP: positions use one aggregated quantity and weighted average cost per asset. Tax lots and per-transaction history are deferred.
 
 ## Future Extensions
 
@@ -86,4 +89,3 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - Tax lots
 - Dividend tracking
 - Performance attribution
-

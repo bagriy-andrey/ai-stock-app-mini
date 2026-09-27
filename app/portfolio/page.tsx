@@ -37,10 +37,18 @@ export default async function PortfolioPage() {
               Real portfolio tracking. Advisory-only, no AI trading actions.
             </p>
           </div>
-          <BaseCurrencySelect
-            action={updateBaseCurrency}
-            baseCurrency={portfolio.baseCurrency}
-          />
+          <div className="flex flex-wrap items-end gap-3">
+            <Link
+              className="h-9 rounded border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+              href="/"
+            >
+              Exit to home
+            </Link>
+            <BaseCurrencySelect
+              action={updateBaseCurrency}
+              baseCurrency={portfolio.baseCurrency}
+            />
+          </div>
         </header>
 
         <section className="grid gap-3 md:grid-cols-4">
@@ -77,10 +85,10 @@ export default async function PortfolioPage() {
             value={portfolio.valuation.isComplete ? "Ready" : "Incomplete"}
             detail={
               portfolio.valuation.hasMissingPrices
-                ? "Missing prices"
+                ? "Some assets have no market price; cost basis is used as a fallback."
                 : portfolio.valuation.hasUnsupportedCurrencies
-                  ? "Needs FX data"
-                  : "No issues"
+                  ? "FX rate is missing for one or more currencies."
+                  : "Prices and FX rates are available for valuation."
             }
           />
         </section>

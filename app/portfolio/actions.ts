@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
+import { calculateWeightedAverageCost } from "@/lib/portfolio/calculations";
 import {
   getOrCreateDefaultPortfolio,
   upsertManualAsset,
@@ -30,30 +31,60 @@ export async function createPosition(formData: FormData) {
     providerSymbol: input.providerSymbol,
   });
 
-  await prisma.position.upsert({
+  const existingPosition = await prisma.position.findUnique({
     where: {
       portfolioId_assetId: {
         portfolioId: portfolio.id,
         assetId: asset.id,
       },
     },
-    create: {
+  });
+
+  if (!existingPosition) {
+    await prisma.position.create({
+      data: {
+        portfolioId: portfolio.id,
+        assetId: asset.id,
+        quantity: input.quantity,
+        averageCost: input.averageCost,
+        costCurrency: input.costCurrency,
+        investmentIntent: input.investmentIntent,
+        notes: input.notes,
+        openedAt: input.openedAt,
+      },
+    });
+
+    revalidatePath(PORTFOLIO_PATH);
+    return;
+  }
+
+  if (existingPosition.costCurrency !== input.costCurrency) {
+    throw new Error(
+      `Existing ${input.symbol} position uses ${existingPosition.costCurrency}. Edit the position manually before adding ${input.costCurrency} lots.`,
+    );
+  }
+
+  const existingQuantity = existingPosition.quantity.toNumber();
+  const existingAverageCost = existingPosition.averageCost.toNumber();
+  const totalQuantity = existingQuantity + input.quantity;
+  const weightedAverageCost = calculateWeightedAverageCost({
+    existingQuantity,
+    existingAverageCost,
+    addedQuantity: input.quantity,
+    addedAverageCost: input.averageCost,
+  });
+
+  await prisma.position.update({
+    where: {
+      id: existingPosition.id,
+    },
+    data: {
       portfolioId: portfolio.id,
       assetId: asset.id,
-      quantity: input.quantity,
-      averageCost: input.averageCost,
+      quantity: totalQuantity,
+      averageCost: weightedAverageCost,
       costCurrency: input.costCurrency,
-      investmentIntent: input.investmentIntent,
-      notes: input.notes,
-      openedAt: input.openedAt,
-    },
-    update: {
-      quantity: input.quantity,
-      averageCost: input.averageCost,
-      costCurrency: input.costCurrency,
-      investmentIntent: input.investmentIntent,
-      notes: input.notes,
-      openedAt: input.openedAt,
+      updatedAt: new Date(),
     },
   });
 
@@ -137,7 +168,9 @@ export async function upsertCashBalance(formData: FormData) {
       amount: input.amount,
     },
     update: {
-      amount: input.amount,
+      amount: {
+        increment: input.amount,
+      },
     },
   });
 

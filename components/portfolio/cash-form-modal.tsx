@@ -82,6 +82,11 @@ export function CashFormModal({
                   value={cashBalance.id}
                 />
               ) : null}
+              <p className="text-xs leading-5 text-zinc-500">
+                {mode === "create"
+                  ? "If the same platform and currency already exist, this amount will be added to the current cash balance."
+                  : "Editing replaces this cash balance amount."}
+              </p>
               <Field label="Platform">
                 <input
                   className={inputClassName}

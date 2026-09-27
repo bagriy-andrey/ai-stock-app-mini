@@ -61,6 +61,25 @@ export function calculateCostBasis(
   return position.quantity * position.averageCost;
 }
 
+export function calculateWeightedAverageCost(input: {
+  existingQuantity: number;
+  existingAverageCost: number;
+  addedQuantity: number;
+  addedAverageCost: number;
+}): number {
+  const totalQuantity = input.existingQuantity + input.addedQuantity;
+
+  if (totalQuantity === 0) {
+    return 0;
+  }
+
+  return (
+    (input.existingQuantity * input.existingAverageCost +
+      input.addedQuantity * input.addedAverageCost) /
+    totalQuantity
+  );
+}
+
 export function calculateMarketValue(
   position: Pick<PortfolioPositionInput, "quantity" | "latestPrice">,
 ): number | null {
