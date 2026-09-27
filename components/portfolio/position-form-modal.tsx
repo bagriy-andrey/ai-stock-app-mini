@@ -21,6 +21,11 @@ type PositionFormValue = {
   investmentIntent: InvestmentIntent;
   openedAt: Date | null;
   notes: string | null;
+  latestPrice?: {
+    price: number;
+    currency: string;
+    observedAt: Date;
+  } | null;
 };
 
 type CashBalance = {
@@ -36,6 +41,7 @@ export function PositionFormModal({
   mode,
   baseCurrency,
   position,
+  initialAsset,
   action,
   assetType,
   cashBalances = [],
@@ -47,6 +53,7 @@ export function PositionFormModal({
   mode: "create" | "edit";
   baseCurrency: string;
   position?: PositionFormValue;
+  initialAsset?: PositionFormValue;
   action: (formData: FormData) => Promise<void>;
   assetType?: AssetType;
   cashBalances?: CashBalance[];
@@ -56,19 +63,22 @@ export function PositionFormModal({
   showTrigger?: boolean;
 }) {
   const router = useRouter();
+  const defaultAsset = position ?? initialAsset;
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [costCurrency, setCostCurrency] = useState(
-    position?.costCurrency ?? baseCurrency,
+    defaultAsset?.costCurrency ?? baseCurrency,
   );
   const [selectedExchange, setSelectedExchange] = useState(
-    position?.exchange ?? "",
+    mode === "edit" ? position?.exchange ?? "" : "",
   );
-  const [quantity, setQuantity] = useState(position?.quantity ?? 0);
-  const [averageCost, setAverageCost] = useState(position?.averageCost ?? 0);
+  const [quantity, setQuantity] = useState(mode === "edit" ? position?.quantity ?? 0 : 0);
+  const [averageCost, setAverageCost] = useState(
+    mode === "edit" ? position?.averageCost ?? 0 : defaultAsset?.latestPrice?.price ?? 0,
+  );
   const [isCostCurrencyLocked, setIsCostCurrencyLocked] = useState(
-    position?.provider !== undefined && position.provider !== "manual",
+    defaultAsset?.provider !== undefined && defaultAsset.provider !== "manual",
   );
   const [toast, setToast] = useState<{
     message: string;
@@ -152,11 +162,14 @@ export function PositionFormModal({
           className={mode === "create" ? primaryButtonClassName : secondaryButtonClassName}
           onClick={() => {
             if (mode === "create") {
-              setCostCurrency(baseCurrency);
+              setCostCurrency(defaultAsset?.costCurrency ?? baseCurrency);
               setSelectedExchange("");
               setQuantity(0);
-              setAverageCost(0);
-              setIsCostCurrencyLocked(false);
+              setAverageCost(defaultAsset?.latestPrice?.price ?? 0);
+              setIsCostCurrencyLocked(
+                defaultAsset?.provider !== undefined &&
+                  defaultAsset.provider !== "manual",
+              );
             }
 
             setOpen(true);
@@ -192,15 +205,15 @@ export function PositionFormModal({
                 <input name="positionId" type="hidden" value={position.id} />
               ) : null}
               <AssetSearchFields
-                defaultAssetCurrency={position?.assetCurrency ?? baseCurrency}
-                defaultAssetType={position?.assetType ?? "STOCK"}
-                defaultExchange={position?.exchange ?? ""}
-                defaultName={position?.name ?? ""}
-                defaultProvider={position?.provider ?? "manual"}
-                defaultProviderSymbol={position?.providerSymbol ?? ""}
-                defaultSymbol={position?.symbol ?? ""}
+                defaultAssetCurrency={defaultAsset?.assetCurrency ?? baseCurrency}
+                defaultAssetType={defaultAsset?.assetType ?? "STOCK"}
+                defaultExchange={mode === "edit" ? position?.exchange ?? "" : ""}
+                defaultName={defaultAsset?.name ?? ""}
+                defaultProvider={defaultAsset?.provider ?? "manual"}
+                defaultProviderSymbol={defaultAsset?.providerSymbol ?? ""}
+                defaultSymbol={defaultAsset?.symbol ?? ""}
                 exchangeOptions={exchangeOptions}
-                lockedAssetType={assetType}
+                lockedAssetType={assetType ?? defaultAsset?.assetType}
                 onAssetCurrencyResolved={(currency, isLocked) => {
                   setCostCurrency(currency);
                   setIsCostCurrencyLocked(isLocked);
@@ -212,7 +225,7 @@ export function PositionFormModal({
                 <Field label="Quantity">
                   <input
                     className={inputClassName}
-                    defaultValue={position?.quantity ?? ""}
+                    defaultValue={mode === "edit" ? position?.quantity ?? "" : ""}
                     min="0"
                     name="quantity"
                     onChange={(event) =>
@@ -226,7 +239,11 @@ export function PositionFormModal({
                 <Field label="Avg cost per unit">
                   <input
                     className={inputClassName}
-                    defaultValue={position?.averageCost ?? ""}
+                    defaultValue={
+                      mode === "edit"
+                        ? position?.averageCost ?? ""
+                        : defaultAsset?.latestPrice?.price ?? ""
+                    }
                     min="0"
                     name="averageCost"
                     onChange={(event) =>
