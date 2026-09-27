@@ -16,6 +16,8 @@ The product should become a personal AI investment intelligence system that:
 
 The system must not automatically trade the user's real portfolio. Autonomous trading belongs only in the isolated AI Paper Trader using virtual/mock money.
 
+The application is intended for personal self-hosted use. It should support Russian and English UI language switching. AI reports should be stored in their original generated language, with on-demand translated views generated through OpenRouter and cached for later reuse.
+
 ## Main Product Modes
 
 ### Long-Term Investing
@@ -34,3 +36,4 @@ It should prioritize technical indicators, momentum, volatility, sentiment, deri
 
 The discovery mode. It scans assets outside the user's current portfolio and watchlist to surface potentially interesting long-term or tactical opportunities.
 
+Discovery should start with a configured universe rather than attempting to collect and analyze every possible market asset. The universe can expand as data providers, cost controls, and outcome evaluation mature.

@@ -14,6 +14,8 @@ The user can see which signals, agents, models, and strategies actually worked o
 - Performance by horizon
 - Performance by asset and asset type
 - Performance by market regime
+- Performance by external signal/provider
+- Performance by model and strategy configuration
 - Dynamic agent weighting
 - Confidence calibration
 - TradingAgents reflection memory
@@ -30,6 +32,7 @@ The user can see which signals, agents, models, and strategies actually worked o
 - Prediction outcomes
 - Agent outputs
 - Model usage records
+- External signal records and provider provenance
 - Market regime labels
 - Paper Trader results
 
@@ -53,6 +56,7 @@ The user can see which signals, agents, models, and strategies actually worked o
 
 - System aggregates resolved predictions
 - Metrics are grouped by agent, model, asset, horizon, and regime
+- Metrics are grouped by provider/signal type when forecasts used external data
 - Calibration recommendations are produced
 - Weights are updated when rules allow
 
@@ -63,6 +67,7 @@ The user can see which signals, agents, models, and strategies actually worked o
 - Overfitting to recent history
 - Survivorship bias
 - Data leakage
+- Mistaking correlation from a costly provider for durable predictive value
 
 ## Dependencies
 
@@ -81,10 +86,10 @@ The user can see which signals, agents, models, and strategies actually worked o
 
 - What minimum sample size is needed before changing weights?
 - How should market regimes be detected initially?
+- What evidence is required before adding expensive providers such as Glassnode, CryptoQuant, or Santiment?
 
 ## Future Extensions
 
 - Automated model-tier recommendations
 - Strategy parameter calibration
 - Regime-specific dashboards
-

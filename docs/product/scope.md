@@ -18,6 +18,8 @@
 - Agent and model performance tracking
 - OpenRouter-based model routing
 - AI usage and cost tracking
+- Russian and English UI language switching
+- On-demand report translation through OpenRouter
 
 ## Out of Scope for Early Phases
 
@@ -30,6 +32,8 @@
 - Many notification channels
 - Hundreds of data providers
 - Minute-by-minute LLM calls for every asset
+- Advanced paid crypto on-chain and social-sentiment data before prediction evaluation proves value
+- Multi-tenant SaaS architecture
 
 ## Non-Negotiable Boundaries
 
@@ -38,4 +42,4 @@
 - Forecasts and evaluations must preserve point-in-time correctness.
 - Important outputs should be structured and persisted.
 - MVP phases should stay simple and measurable.
-
+- Market-data ingestion should be scoped to the user's portfolio, watchlist, and configured discovery universe before broad market-scale collection.

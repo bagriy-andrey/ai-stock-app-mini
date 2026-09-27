@@ -32,6 +32,7 @@ Initial conceptual allocation:
 - Portfolio Manager: `strong`
 - Forecast Engine: `strong`
 - Reflection: `cheap` or `standard`
+- Report Translation: `cheap` or `standard`
 
 ## Fallbacks
 
@@ -61,3 +62,14 @@ Persist each AI call with:
 
 Eventually compare model quality per dollar using prediction accuracy, alpha, latency, and cost by agent, model, asset type, horizon, and market regime.
 
+## Task Profiles
+
+In addition to logical tiers, routing should eventually support task profiles so different use cases can choose appropriate model and cost behavior:
+
+- `analysis`: multi-agent asset or portfolio analysis
+- `forecast`: structured prediction generation
+- `reflection`: post-outcome learning summaries
+- `translation`: report translation between Russian and English
+- `paper_trading`: strategy decision support for virtual trades
+
+Task profiles should still resolve through configurable OpenRouter models and persist usage records.

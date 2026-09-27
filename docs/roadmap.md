@@ -4,7 +4,7 @@
 
 Objective: create the base project and architecture.
 
-Scope: repository structure, frontend skeleton, backend skeleton, database, environment configuration, OpenRouter integration, model router abstraction, scheduler foundation, logging, and basic application configuration.
+Scope: repository structure, frontend skeleton, backend skeleton, database, environment configuration, OpenRouter integration, model router abstraction, scheduler foundation, logging, i18n foundation, and basic application configuration.
 
 Dependencies: documentation bootstrap and architecture decisions for initial stack.
 
@@ -14,7 +14,7 @@ Completion criteria: project can run locally with baseline app/API structure, co
 
 Objective: build non-AI portfolio and watchlist workflows.
 
-Scope: manually add/edit/remove positions, cash balance, watchlist CRUD, stock/ETF/crypto asset types, basic market prices, portfolio value, P&L, allocation.
+Scope: manually add/edit/remove positions, cash balance, watchlist CRUD, stock/ETF/crypto asset types, basic market prices, portfolio value, P&L, allocation, and provider abstraction for the initial market-data stack.
 
 Dependencies: foundation and database.
 
@@ -34,7 +34,7 @@ Completion criteria: user can manually analyze assets such as BTC, NVDA, and SPY
 
 Objective: add scheduled monitoring and alerts.
 
-Scope: scheduler, owned/watchlist analysis, persisted reports, changed-outlook detection, portfolio alerts, morning/evening reports, Telegram notifications.
+Scope: scheduler, owned/watchlist analysis, persisted reports, changed-outlook detection, portfolio alerts, morning/evening reports, daily/weekly/monthly/quarterly/yearly reports, Telegram notifications, and on-demand report translation.
 
 Dependencies: AI analysis and scheduler foundation.
 
@@ -74,7 +74,7 @@ Completion criteria: user can inspect prediction quality over time.
 
 Objective: add isolated autonomous mock trading.
 
-Scope: virtual portfolio, virtual cash, mock decisions, transaction ledger, position sizing, risk constraints, performance metrics, benchmark comparison.
+Scope: virtual portfolio, virtual cash, mock decisions, transaction ledger, position sizing, risk constraints, performance metrics, benchmark comparison, and comparison across multiple agents, models, and strategy configurations.
 
 Dependencies: forecasts, risk data, market data.
 
@@ -99,4 +99,3 @@ Scope: OpenRouter experiments, quality-vs-cost comparison, automatic model-tier 
 Dependencies: model routing, AI cost tracking, prediction quality metrics.
 
 Completion criteria: system can compare models by cost, latency, and investment-analysis quality.
-

@@ -15,18 +15,43 @@ The user sees current portfolio value and the AI system has reliable inputs for 
 - Asset metadata
 - Provider abstraction where practical
 - Data freshness tracking
+- Initial integration with a small personal-use provider stack
+- Point-in-time data capture for forecasts and later evaluation
 
 ## Non-Goals
 
 - Hundreds of providers
 - High-frequency market data
 - Full institutional-grade data warehouse
+- Expensive advanced on-chain or social-sentiment providers before measured value is proven
+- Broad market-scale ingestion unrelated to the user's portfolio, watchlist, or configured discovery universe
 
 ## Inputs
 
 - External market data providers
 - Asset universe definitions
 - Manual asset metadata if needed
+
+## Initial Provider Strategy
+
+Use provider interfaces so providers can be replaced, but keep the initial implementation narrow:
+
+- FMP as the initial primary provider for US stock/ETF prices, fundamentals, calendars, estimates, and financial news if the selected plan covers the required endpoints.
+- CoinGecko for crypto spot prices and history.
+- FRED/ALFRED for macroeconomic data and point-in-time macro vintages.
+- SEC EDGAR for primary company filings.
+- GDELT for global and geopolitical event intelligence.
+- Marketaux as an optional financial-news provider, starting free and upgrading only if needed.
+
+Fallback candidates:
+
+- Tiingo if a clean personal-use price feed is preferable or FMP data quality is insufficient.
+- EODHD if broader global stock/ETF coverage is needed earlier.
+
+Deferred providers:
+
+- CoinGlass should be the first paid tactical crypto upgrade for funding, open interest, liquidations, and long/short positioning.
+- Glassnode, CryptoQuant, and Santiment should wait until prediction evaluation shows that advanced on-chain or social data improves outcomes enough to justify cost.
 
 ## Outputs
 
@@ -69,11 +94,14 @@ The user sees current portfolio value and the AI system has reliable inputs for 
 - Portfolio valuation can use current prices
 - Forecast evaluation can retrieve point-in-time prices
 - Data freshness is visible to downstream services
+- Provider usage and cost assumptions are documented per integration
+- Ingestion is scoped to the user's portfolio, watchlist, and configured discovery universe unless a broader scan is explicitly configured
 
 ## Open Questions
 
-- Which initial providers should be used?
-- How much historical data is needed for MVP?
+- Which exact FMP plan covers the MVP endpoints for prices, fundamentals, calendars, estimates, and news?
+- How much historical stock/ETF and crypto data should be backfilled during MVP setup?
+- When should Marketaux be upgraded from free to paid?
 
 ## Future Extensions
 
@@ -82,4 +110,3 @@ The user sees current portfolio value and the AI system has reliable inputs for 
 - Sentiment
 - Crypto derivatives
 - On-chain metrics
-
