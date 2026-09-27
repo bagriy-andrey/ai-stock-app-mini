@@ -11,6 +11,8 @@ const symbolSchema = z
   .max(24)
   .transform((value) => value.toUpperCase());
 
+const providerSymbolSchema = z.string().trim().min(1).max(120);
+
 const optionalTextSchema = z
   .string()
   .trim()
@@ -39,7 +41,7 @@ export const positionFormSchema = z.object({
     .min(1)
     .max(40)
     .transform((value) => value.toLowerCase()),
-  providerSymbol: symbolSchema,
+  providerSymbol: providerSymbolSchema,
   quantity: nonNegativeNumberSchema,
   averageCost: nonNegativeNumberSchema,
   costCurrency: supportedCurrencySchema,

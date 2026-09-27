@@ -30,9 +30,33 @@ describe("portfolio form validation", () => {
       assetCurrency: "USD",
       costCurrency: "USD",
       provider: "fmp",
-      providerSymbol: "NVDA",
+      providerSymbol: "nvda",
       quantity: 2.5,
       averageCost: 120,
+    });
+  });
+
+  it("preserves provider-specific asset ids for crypto providers", () => {
+    const result = positionFormSchema.parse({
+      symbol: " eth ",
+      name: "Ethereum",
+      assetType: AssetType.CRYPTO,
+      assetCurrency: " usd ",
+      exchange: " Binance ",
+      provider: " coingecko ",
+      providerSymbol: " ethereum ",
+      quantity: "1",
+      averageCost: "2500",
+      costCurrency: " usd ",
+      investmentIntent: InvestmentIntent.LONG_TERM,
+      openedAt: "2026-09-27",
+      notes: "",
+    });
+
+    expect(result).toMatchObject({
+      symbol: "ETH",
+      provider: "coingecko",
+      providerSymbol: "ethereum",
     });
   });
 

@@ -2,6 +2,8 @@ import { AssetType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const searchParamsSchema = z.object({
   provider: z.string().trim().min(1).max(40),
   providerSymbol: z.string().trim().min(1).max(120),
@@ -86,6 +88,13 @@ type CoinGeckoCoinResponse = {
   country_origin?: string;
 };
 
+type CoinGeckoSearchCoin = {
+  id?: string;
+  name?: string;
+  symbol?: string;
+  market_cap_rank?: number | null;
+};
+
 type FmpProfileResponse = Array<{
   description?: string;
   website?: string;
@@ -141,12 +150,9 @@ async function getProviderProfile(input: {
   type: AssetType;
 }): Promise<AssetProfile | null> {
   if (input.type === AssetType.CRYPTO) {
-    const coinId =
-      input.provider === "coingecko"
-        ? input.providerSymbol
-        : await findCoinGeckoId(input.symbol, input.name);
+    const candidateCoinIds = await getCoinGeckoCandidateIds(input);
 
-    if (coinId) {
+    for (const coinId of candidateCoinIds) {
       const profile = await getCoinGeckoProfile(coinId);
 
       if (profile) {
@@ -163,14 +169,76 @@ async function getProviderProfile(input: {
   );
 }
 
-async function findCoinGeckoId(
+async function getCoinGeckoCandidateIds(input: {
+  provider: string;
+  providerSymbol: string;
+  symbol: string;
+  name: string;
+}): Promise<string[]> {
+  const candidates = new Set<string>();
+
+  if (input.provider === "coingecko") {
+    candidates.add(input.providerSymbol);
+    candidates.add(input.providerSymbol.toLowerCase());
+  }
+
+  candidates.add(input.symbol.toLowerCase());
+
+  const knownCoinId = knownCoinGeckoIds[input.symbol.toUpperCase()];
+
+  if (knownCoinId) {
+    candidates.add(knownCoinId);
+  }
+
+  for (const foundCoinId of await findCoinGeckoIds(input.symbol, input.name)) {
+    candidates.add(foundCoinId);
+  }
+
+  return [...candidates].filter((coinId) => coinId.length > 0);
+}
+
+async function findCoinGeckoIds(
   symbol: string,
   name: string,
-): Promise<string | null> {
+): Promise<string[]> {
+  const searchResults = await Promise.all([
+    searchCoinGeckoCoins(symbol),
+    searchCoinGeckoCoins(name),
+  ]);
+  const coins = dedupeCoinGeckoCoins(searchResults.flat());
+  try {
+    const normalizedSymbol = symbol.toLowerCase();
+    const normalizedName = name.toLowerCase();
+
+    return [
+      ...sortCoinGeckoSearchCoins(
+        coins.filter((coin) => coin.name?.toLowerCase() === normalizedName),
+      ),
+      ...sortCoinGeckoSearchCoins(
+        coins.filter((coin) => coin.symbol?.toLowerCase() === normalizedSymbol),
+      ),
+      ...sortCoinGeckoSearchCoins(coins),
+    ]
+      .filter((coin) => coin.id)
+      .map((coin) => coin.id as string);
+  } catch {
+    return [];
+  }
+}
+
+async function searchCoinGeckoCoins(
+  query: string,
+): Promise<CoinGeckoSearchCoin[]> {
+  const normalizedQuery = query.trim();
+
+  if (!normalizedQuery) {
+    return [];
+  }
+
   try {
     const response = await fetch(
       `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(
-        name || symbol,
+        normalizedQuery,
       )}`,
       {
         next: {
@@ -180,29 +248,46 @@ async function findCoinGeckoId(
     );
 
     if (!response.ok) {
-      return null;
+      return [];
     }
 
     const data = (await response.json()) as {
-      coins?: Array<{
-        id?: string;
-        name?: string;
-        symbol?: string;
-      }>;
+      coins?: CoinGeckoSearchCoin[];
     };
-    const normalizedSymbol = symbol.toLowerCase();
-    const normalizedName = name.toLowerCase();
-    const match = (data.coins ?? []).find(
-      (coin) =>
-        coin.id &&
-        (coin.symbol?.toLowerCase() === normalizedSymbol ||
-          coin.name?.toLowerCase() === normalizedName),
-    );
 
-    return match?.id ?? data.coins?.find((coin) => coin.id)?.id ?? null;
+    return data.coins ?? [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+function dedupeCoinGeckoCoins(
+  coins: CoinGeckoSearchCoin[],
+): CoinGeckoSearchCoin[] {
+  const seen = new Set<string>();
+  const deduped: CoinGeckoSearchCoin[] = [];
+
+  for (const coin of coins) {
+    if (!coin.id || seen.has(coin.id)) {
+      continue;
+    }
+
+    seen.add(coin.id);
+    deduped.push(coin);
+  }
+
+  return deduped;
+}
+
+function sortCoinGeckoSearchCoins(
+  coins: CoinGeckoSearchCoin[],
+): CoinGeckoSearchCoin[] {
+  return [...coins].sort((left, right) => {
+    const leftRank = left.market_cap_rank ?? Number.POSITIVE_INFINITY;
+    const rightRank = right.market_cap_rank ?? Number.POSITIVE_INFINITY;
+
+    return leftRank - rightRank;
+  });
 }
 
 async function getCoinGeckoProfile(
@@ -449,3 +534,23 @@ function normalizeText(value: string | null): string | null {
 function getFirstNonEmpty(values: string[]): string | null {
   return values.map((value) => normalizeText(value)).find(Boolean) ?? null;
 }
+
+const knownCoinGeckoIds: Record<string, string> = {
+  ADA: "cardano",
+  AVAX: "avalanche-2",
+  BNB: "binancecoin",
+  BTC: "bitcoin",
+  DOGE: "dogecoin",
+  DOT: "polkadot",
+  ETH: "ethereum",
+  LINK: "chainlink",
+  LTC: "litecoin",
+  MATIC: "matic-network",
+  SOL: "solana",
+  TON: "the-open-network",
+  TRX: "tron",
+  UNI: "uniswap",
+  USDC: "usd-coin",
+  USDT: "tether",
+  XRP: "ripple",
+};

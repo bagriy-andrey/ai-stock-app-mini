@@ -50,8 +50,13 @@ export async function GET(request: Request) {
     searchProviderAssets(q, type),
   ]);
 
+  const orderedResults =
+    type === AssetType.CRYPTO
+      ? [...providerResults, ...localResults]
+      : [...localResults, ...providerResults];
+
   return NextResponse.json({
-    results: mergeResults([...localResults, ...providerResults]).slice(0, 8),
+    results: mergeResults(orderedResults).slice(0, 8),
   });
 }
 
