@@ -164,3 +164,7 @@ Phase 1 does not support margin, short positions, negative cash, or liability mo
 ### Store latest price snapshots through MarketPrice
 
 Phase 1A adds normalized market price snapshots with provider provenance. The first UI workflows may use manual or mock prices before real provider integrations are selected.
+
+### Use provider search only as an asset metadata helper in Phase 1
+
+Portfolio entry can search local assets, CoinGecko crypto metadata, and FMP stock/ETF metadata when `FMP_API_KEY` is configured. These searches populate asset fields only; they do not execute trades and they do not replace later market-price ingestion.
