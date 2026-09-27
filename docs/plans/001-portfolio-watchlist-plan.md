@@ -127,6 +127,30 @@ Constraints:
 - Quantity must be non-negative.
 - Average cost must be non-negative.
 
+### PositionPlatformHolding
+
+Represents the exchange/platform breakdown under an aggregated real-portfolio position.
+
+Recommended fields:
+
+- `id`
+- `positionId`
+- `platform`
+- `quantity`
+- `averageCost`
+- `costCurrency`
+- `openedAt`
+- `notes`
+- `createdAt`
+- `updatedAt`
+
+MVP assumption:
+
+- Keep one aggregated `Position` per portfolio asset for valuation and allocation.
+- Store one platform holding row per position and platform so the user can inspect where the asset is held.
+- Repeated adds for the same position and platform increase the platform quantity and recalculate that platform's weighted average cost.
+- Manual position edits are correction workflows and may collapse the platform breakdown back into one platform row from the edit form.
+
 ### CashBalance
 
 Represents available real-portfolio cash by currency.

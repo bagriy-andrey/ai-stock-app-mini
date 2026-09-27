@@ -26,6 +26,8 @@ Portfolio-level data should include:
 - geographic exposure
 - currency exposure
 
+Position storage keeps one aggregated position per portfolio asset for allocation and P&L, plus platform-level holding rows for the exchange/brokerage breakdown of that aggregated position.
+
 ## Watchlist
 
 Watchlist records should support stocks, ETFs, and crypto assets. The watchlist is distinct from owned positions.

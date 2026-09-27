@@ -20,6 +20,7 @@ type PortfolioPosition = {
   exchange: string | null;
   provider: string;
   providerSymbol: string;
+  platformHoldings: PositionPlatformHolding[];
   quantity: number;
   averageCost: number;
   costCurrency: string;
@@ -31,6 +32,16 @@ type PortfolioPosition = {
     currency: string;
     observedAt: Date;
   } | null;
+};
+
+type PositionPlatformHolding = {
+  id: string;
+  platform: string;
+  quantity: number;
+  averageCost: number;
+  costCurrency: string;
+  openedAt: Date | null;
+  notes: string | null;
 };
 
 type PositionValuation = {
@@ -204,6 +215,9 @@ function PositionsTable({
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
+  const [selectedPosition, setSelectedPosition] =
+    useState<PortfolioPosition | null>(null);
+
   return (
     <section className="rounded border border-zinc-200 bg-white">
       <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
@@ -244,7 +258,11 @@ function PositionsTable({
                 );
 
                 return (
-                  <tr key={position.id}>
+                  <tr
+                    className="cursor-pointer hover:bg-zinc-50"
+                    key={position.id}
+                    onClick={() => setSelectedPosition(position)}
+                  >
                     <td className="px-4 py-3 align-top">
                       <div className="font-medium text-zinc-950">
                         {position.symbol}
@@ -295,7 +313,10 @@ function PositionsTable({
                     <td className="max-w-48 truncate px-4 py-3 align-top text-zinc-600">
                       {position.notes ?? ""}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td
+                      className="px-4 py-3 align-top"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <PositionActionsMenu
                         baseCurrency={baseCurrency}
                         cashBalances={cashBalances}
@@ -312,7 +333,149 @@ function PositionsTable({
           </table>
         </div>
       )}
+      {selectedPosition ? (
+        <PositionPlatformHoldingsModal
+          onClose={() => setSelectedPosition(null)}
+          position={selectedPosition}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function PositionPlatformHoldingsModal({
+  position,
+  onClose,
+}: {
+  position: PortfolioPosition;
+  onClose: () => void;
+}) {
+  const holdings = position.platformHoldings;
+  const totalQuantity = holdings.reduce(
+    (total, holding) => total + holding.quantity,
+    0,
+  );
+  const hasBreakdownMismatch =
+    holdings.length > 0 && Math.abs(totalQuantity - position.quantity) > 1e-8;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-zinc-950/40 px-4 py-6">
+      <div className="max-h-full w-full max-w-3xl overflow-auto rounded border border-zinc-200 bg-white shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4">
+          <div>
+            <h2 className="text-base font-semibold">
+              {position.symbol} platform breakdown
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600">{position.name}</p>
+          </div>
+          <button
+            className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100"
+            onClick={onClose}
+            type="button"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="grid gap-4 px-5 py-5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <DetailMetric
+              label="Total quantity"
+              value={formatNumber(position.quantity)}
+            />
+            <DetailMetric
+              label="Average cost"
+              value={formatMoney(position.averageCost, position.costCurrency)}
+            />
+            <DetailMetric
+              label="Cost basis"
+              value={formatMoney(
+                position.quantity * position.averageCost,
+                position.costCurrency,
+              )}
+            />
+          </div>
+
+          {hasBreakdownMismatch ? (
+            <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Platform rows total {formatNumber(totalQuantity)}, while the
+              aggregate position total is {formatNumber(position.quantity)}.
+              Edit the position to reconcile the breakdown.
+            </p>
+          ) : null}
+
+          {holdings.length === 0 ? (
+            <p className="rounded border border-zinc-200 bg-zinc-50 px-3 py-6 text-sm text-zinc-600">
+              No platform breakdown has been recorded for this position yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded border border-zinc-200">
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Exchange</th>
+                    <th className="px-4 py-3 font-semibold">Quantity</th>
+                    <th className="px-4 py-3 font-semibold">Avg cost</th>
+                    <th className="px-4 py-3 font-semibold">Cost basis</th>
+                    <th className="px-4 py-3 font-semibold">Opened</th>
+                    <th className="px-4 py-3 font-semibold">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200">
+                  {holdings.map((holding) => (
+                    <tr key={holding.id}>
+                      <td className="px-4 py-3 font-medium">
+                        {holding.platform}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatNumber(holding.quantity)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatMoney(
+                          holding.averageCost,
+                          holding.costCurrency,
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatMoney(
+                          holding.quantity * holding.averageCost,
+                          holding.costCurrency,
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatDisplayDate(holding.openedAt)}
+                      </td>
+                      <td className="max-w-52 truncate px-4 py-3 text-zinc-600">
+                        {holding.notes ?? ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t border-zinc-200 bg-zinc-50 font-medium">
+                  <tr>
+                    <td className="px-4 py-3">Total</td>
+                    <td className="px-4 py-3">{formatNumber(totalQuantity)}</td>
+                    <td className="px-4 py-3" />
+                    <td className="px-4 py-3" />
+                    <td className="px-4 py-3" />
+                    <td className="px-4 py-3" />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-2">
+      <p className="text-xs font-medium uppercase text-zinc-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-zinc-950">{value}</p>
+    </div>
   );
 }
 

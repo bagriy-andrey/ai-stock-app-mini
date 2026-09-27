@@ -149,6 +149,10 @@ Phase 1 stores one average cost per active position. Tax lots, broker lots, divi
 
 The MVP schema uses a unique `(portfolioId, assetId)` constraint for positions. Different intents for the same asset can be revisited later if there is a concrete workflow that needs separate lots or sub-positions.
 
+### Store platform breakdowns below aggregated positions
+
+The portfolio keeps one aggregate position per portfolio asset for Phase 1 valuation and allocation, but stores child platform holding rows for the user's exchange/brokerage breakdown. Repeated adds to the same asset and platform update both the aggregate position and the platform holding with weighted average cost. This provides visibility into where assets are held without introducing full tax-lot accounting yet.
+
 ### Keep watchlist items unique by asset in Phase 1
 
 The MVP schema allows one watchlist item per asset. Watchlist groups and multiple strategy-specific watch entries are deferred.

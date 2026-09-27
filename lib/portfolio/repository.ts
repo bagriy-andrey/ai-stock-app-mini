@@ -10,6 +10,7 @@ import type {
   Asset,
   AssetType,
   Position,
+  PositionPlatformHolding,
   PortfolioActivityLog,
   PortfolioActivityType,
 } from "@prisma/client";
@@ -44,6 +45,7 @@ export type PortfolioPositionSummary = {
   openedAt: Date | null;
   provider: string;
   providerSymbol: string;
+  platformHoldings: PositionPlatformHoldingSummary[];
   latestPrice: {
     price: number;
     currency: string;
@@ -56,6 +58,16 @@ export type CashBalanceSummary = {
   platform: string;
   currency: string;
   amount: number;
+};
+
+export type PositionPlatformHoldingSummary = {
+  id: string;
+  platform: string;
+  quantity: number;
+  averageCost: number;
+  costCurrency: string;
+  openedAt: Date | null;
+  notes: string | null;
 };
 
 export type PortfolioActivityLogSummary = {
@@ -99,6 +111,11 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
           createdAt: "asc",
         },
         include: {
+          platformHoldings: {
+            orderBy: {
+              platform: "asc",
+            },
+          },
           asset: {
             include: {
               marketPrices: {
@@ -188,6 +205,7 @@ export async function upsertManualAsset(input: {
 
 function toPositionSummary(
   position: Position & {
+    platformHoldings: PositionPlatformHolding[];
     asset: Asset & {
       marketPrices: Array<{
         price: { toNumber: () => number };
@@ -215,6 +233,9 @@ function toPositionSummary(
     openedAt: position.openedAt,
     provider: position.asset.provider,
     providerSymbol: position.asset.providerSymbol,
+    platformHoldings: position.platformHoldings.map(
+      toPositionPlatformHoldingSummary,
+    ),
     latestPrice: latestPrice
       ? {
           price: latestPrice.price.toNumber(),
@@ -222,6 +243,20 @@ function toPositionSummary(
           observedAt: latestPrice.observedAt,
         }
       : null,
+  };
+}
+
+function toPositionPlatformHoldingSummary(
+  platformHolding: PositionPlatformHolding,
+): PositionPlatformHoldingSummary {
+  return {
+    id: platformHolding.id,
+    platform: platformHolding.platform,
+    quantity: platformHolding.quantity.toNumber(),
+    averageCost: platformHolding.averageCost.toNumber(),
+    costCurrency: platformHolding.costCurrency,
+    openedAt: platformHolding.openedAt,
+    notes: platformHolding.notes,
   };
 }
 

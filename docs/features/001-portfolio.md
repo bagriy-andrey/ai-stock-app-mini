@@ -50,6 +50,7 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 
 - User adds a position
 - User adds an already-owned asset and the system increases quantity while recalculating weighted average cost
+- User can open an aggregated asset row and see the position quantity split by exchange/platform
 - User selects or enters the position exchange/platform, sees matching free cash for the cost currency when it exists, and the system deducts purchase cost from that cash balance when the position is added
 - User edits quantity or average price
 - User removes a position
@@ -88,6 +89,8 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - How should multi-currency cash balances be represented initially?
 
 Resolved for MVP: positions use one aggregated quantity and weighted average cost per asset. Tax lots and per-transaction history are deferred.
+
+Resolved for MVP: platform-level position holdings are stored as a breakdown under the aggregated position so the user can see how much of an asset is held on each exchange/platform without introducing full tax lots.
 
 ## Future Extensions
 

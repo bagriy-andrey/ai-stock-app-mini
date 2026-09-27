@@ -83,7 +83,7 @@ export async function createPosition(formData: FormData) {
     });
 
     if (!existingPosition) {
-      await tx.position.create({
+      const createdPosition = await tx.position.create({
         data: {
           portfolioId: portfolio.id,
           assetId: asset.id,
@@ -94,6 +94,16 @@ export async function createPosition(formData: FormData) {
           notes: input.notes,
           openedAt: input.openedAt,
         },
+      });
+
+      await upsertPositionPlatformHolding(tx, {
+        positionId: createdPosition.id,
+        platform: input.exchange,
+        quantity: input.quantity,
+        averageCost: input.averageCost,
+        costCurrency: input.costCurrency,
+        openedAt: input.openedAt,
+        notes: input.notes,
       });
     } else {
       if (existingPosition.costCurrency !== input.costCurrency) {
@@ -124,6 +134,16 @@ export async function createPosition(formData: FormData) {
           costCurrency: input.costCurrency,
           updatedAt: new Date(),
         },
+      });
+
+      await upsertPositionPlatformHolding(tx, {
+        positionId: existingPosition.id,
+        platform: input.exchange,
+        quantity: input.quantity,
+        averageCost: input.averageCost,
+        costCurrency: input.costCurrency,
+        openedAt: input.openedAt,
+        notes: input.notes,
       });
     }
 
@@ -165,19 +185,39 @@ export async function updatePosition(formData: FormData) {
     providerSymbol: input.providerSymbol,
   });
 
-  await prisma.position.update({
-    where: {
-      id: input.positionId,
-    },
-    data: {
-      assetId: asset.id,
-      quantity: input.quantity,
-      averageCost: input.averageCost,
-      costCurrency: input.costCurrency,
-      investmentIntent: input.investmentIntent,
-      notes: input.notes,
-      openedAt: input.openedAt,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.position.update({
+      where: {
+        id: input.positionId,
+      },
+      data: {
+        assetId: asset.id,
+        quantity: input.quantity,
+        averageCost: input.averageCost,
+        costCurrency: input.costCurrency,
+        investmentIntent: input.investmentIntent,
+        notes: input.notes,
+        openedAt: input.openedAt,
+      },
+    });
+
+    await tx.positionPlatformHolding.deleteMany({
+      where: {
+        positionId: input.positionId,
+      },
+    });
+
+    await tx.positionPlatformHolding.create({
+      data: {
+        positionId: input.positionId,
+        platform: input.exchange,
+        quantity: input.quantity,
+        averageCost: input.averageCost,
+        costCurrency: input.costCurrency,
+        openedAt: input.openedAt,
+        notes: input.notes,
+      },
+    });
   });
 
   revalidatePath(PORTFOLIO_PATH);
@@ -384,6 +424,70 @@ async function createPortfolioActivityLog(
       `Portfolio activity log storage is not ready. Run npm run prisma:generate, npm run prisma:migrate, restart the dev server, then try again. ${getErrorMessage(error)}`,
     );
   }
+}
+
+async function upsertPositionPlatformHolding(
+  tx: Prisma.TransactionClient,
+  input: {
+    positionId: string;
+    platform: string;
+    quantity: number;
+    averageCost: number;
+    costCurrency: string;
+    openedAt: Date;
+    notes: string | null;
+  },
+) {
+  const existingHolding = await tx.positionPlatformHolding.findUnique({
+    where: {
+      positionId_platform: {
+        positionId: input.positionId,
+        platform: input.platform,
+      },
+    },
+  });
+
+  if (!existingHolding) {
+    await tx.positionPlatformHolding.create({
+      data: {
+        positionId: input.positionId,
+        platform: input.platform,
+        quantity: input.quantity,
+        averageCost: input.averageCost,
+        costCurrency: input.costCurrency,
+        openedAt: input.openedAt,
+        notes: input.notes,
+      },
+    });
+    return;
+  }
+
+  if (existingHolding.costCurrency !== input.costCurrency) {
+    throw new Error(
+      `Existing ${input.platform} holding uses ${existingHolding.costCurrency}. Edit the position manually before adding ${input.costCurrency} lots.`,
+    );
+  }
+
+  const existingQuantity = existingHolding.quantity.toNumber();
+  const totalQuantity = existingQuantity + input.quantity;
+  const weightedAverageCost = calculateWeightedAverageCost({
+    existingQuantity,
+    existingAverageCost: existingHolding.averageCost.toNumber(),
+    addedQuantity: input.quantity,
+    addedAverageCost: input.averageCost,
+  });
+
+  await tx.positionPlatformHolding.update({
+    where: {
+      id: existingHolding.id,
+    },
+    data: {
+      quantity: totalQuantity,
+      averageCost: weightedAverageCost,
+      openedAt: existingHolding.openedAt ?? input.openedAt,
+      notes: input.notes ?? existingHolding.notes,
+    },
+  });
 }
 
 function getErrorMessage(error: unknown): string {
