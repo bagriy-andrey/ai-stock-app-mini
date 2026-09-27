@@ -31,6 +31,7 @@ export function AssetSearchFields({
   exchangeOptions = [],
   onAssetCurrencyResolved,
   onExchangeChange,
+  onAssetSelected,
 }: {
   defaultAssetType?: AssetType;
   defaultSymbol?: string;
@@ -43,6 +44,7 @@ export function AssetSearchFields({
   exchangeOptions?: string[];
   onAssetCurrencyResolved?: (currency: string, isLocked: boolean) => void;
   onExchangeChange?: (exchange: string) => void;
+  onAssetSelected?: (asset: AssetSearchResult) => void;
 }) {
   const [assetType, setAssetType] = useState<AssetType>(
     lockedAssetType ?? defaultAssetType,
@@ -151,6 +153,7 @@ export function AssetSearchFields({
     setResults([]);
     setHasSymbolInteraction(false);
     onAssetCurrencyResolved?.(nextCurrency, shouldLockCurrency);
+    onAssetSelected?.(result);
   }
 
   return (

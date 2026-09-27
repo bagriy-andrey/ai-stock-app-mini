@@ -314,13 +314,6 @@ function PositionsTable({
                       <div className="font-medium text-zinc-950">
                         {position.symbol}
                       </div>
-                      <div className="max-w-56 truncate text-xs text-zinc-500">
-                        {position.name}
-                      </div>
-                      <div className="text-xs text-zinc-500">
-                        {position.provider} / {position.assetCurrency}
-                        {position.exchange ? ` / ${position.exchange}` : ""}
-                      </div>
                     </td>
                     <td className="px-4 py-3 align-top">
                       {formatNumber(position.quantity)}
@@ -367,6 +360,7 @@ function PositionsTable({
                       <PositionActionsMenu
                         baseCurrency={baseCurrency}
                         cashBalances={cashBalances}
+                        createAction={createAction}
                         deleteAction={deleteAction}
                         exchangeOptions={exchangeOptions}
                         position={position}

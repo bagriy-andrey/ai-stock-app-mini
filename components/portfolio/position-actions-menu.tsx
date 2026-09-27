@@ -53,6 +53,7 @@ export function PositionActionsMenu({
   cashBalances,
   exchangeOptions,
   updateAction,
+  createAction,
   deleteAction,
   sellAction,
 }: {
@@ -61,11 +62,13 @@ export function PositionActionsMenu({
   cashBalances: CashBalance[];
   exchangeOptions: string[];
   updateAction: (formData: FormData) => Promise<void>;
+  createAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
   sellAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isBuyOpen, setIsBuyOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
@@ -169,6 +172,16 @@ export function PositionActionsMenu({
             Sell
           </button>
           <button
+            className="h-9 w-full rounded px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            onClick={() => {
+              setIsBuyOpen(true);
+              setIsOpen(false);
+            }}
+            type="button"
+          >
+            Buy
+          </button>
+          <button
             className="h-9 w-full rounded px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
             onClick={() => {
               setIsDeleteOpen(true);
@@ -199,6 +212,18 @@ export function PositionActionsMenu({
         isOpen={isSellOpen}
         onOpenChange={setIsSellOpen}
         position={position}
+        showTrigger={false}
+      />
+      <PositionFormModal
+        action={createAction}
+        assetType={position.assetType}
+        baseCurrency={baseCurrency}
+        cashBalances={cashBalances}
+        exchangeOptions={exchangeOptions}
+        initialAsset={position}
+        isOpen={isBuyOpen}
+        mode="create"
+        onOpenChange={setIsBuyOpen}
         showTrigger={false}
       />
       <ConfirmDeleteButton

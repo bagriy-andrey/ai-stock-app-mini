@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AssetType, InvestmentIntent } from "@prisma/client";
 
@@ -66,6 +66,7 @@ export function PositionSellModal({
   const [unitPrice, setUnitPrice] = useState(
     position.latestPrice?.price ?? position.averageCost,
   );
+  const [amount, setAmount] = useState(0);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -75,6 +76,29 @@ export function PositionSellModal({
     sellableHoldings.find((holding) => holding.id === selectedHoldingId) ??
     defaultHolding;
   const proceeds = quantity * unitPrice;
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isActive = true;
+
+    fetchCurrentPrice(position)
+      .then((price) => {
+        if (!isActive || price === null) {
+          return;
+        }
+
+        setUnitPrice(price);
+        setAmount(0);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isActive = false;
+    };
+  }, [isOpen, position]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,6 +124,7 @@ export function PositionSellModal({
       await action(formData);
       form.reset();
       setQuantity(0);
+      setAmount(0);
       setUnitPrice(position.latestPrice?.price ?? position.averageCost);
       setOpen(false);
       showToast("Asset sold successfully.", "success");
@@ -116,6 +141,7 @@ export function PositionSellModal({
 
     setSelectedHoldingId(nextDefaultHolding?.id ?? "");
     setQuantity(0);
+    setAmount(0);
     setUnitPrice(position.latestPrice?.price ?? position.averageCost);
     setOpen(true);
   }
@@ -177,6 +203,7 @@ export function PositionSellModal({
                   onChange={(event) => {
                     setSelectedHoldingId(event.target.value);
                     setQuantity(0);
+                    setAmount(0);
                   }}
                   value={selectedHolding?.id ?? ""}
                 >
@@ -203,30 +230,78 @@ export function PositionSellModal({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Quantity">
                   <input
                     className={inputClassName}
                     max={selectedHolding?.quantity ?? 0}
                     min="0"
                     name="quantity"
-                    onChange={(event) =>
-                      setQuantity(event.target.valueAsNumber || 0)
-                    }
+                    onChange={(event) => {
+                      const maxQuantity = selectedHolding?.quantity ?? 0;
+                      const nextQuantity = Math.min(
+                        event.target.valueAsNumber || 0,
+                        maxQuantity,
+                      );
+
+                      setQuantity(nextQuantity);
+                      setAmount(nextQuantity * unitPrice);
+                    }}
                     required
                     step="any"
                     type="number"
                     value={quantity || ""}
                   />
                 </Field>
+                <Field label={`Amount in ${selectedHolding?.costCurrency ?? position.costCurrency}`}>
+                  <div className="flex gap-2">
+                    <input
+                      className={inputClassName}
+                      min="0"
+                      onChange={(event) => {
+                        const maxQuantity = selectedHolding?.quantity ?? 0;
+                        const maxAmount = maxQuantity * unitPrice;
+                        const nextAmount = Math.min(
+                          event.target.valueAsNumber || 0,
+                          maxAmount,
+                        );
+
+                        setAmount(nextAmount);
+                        setQuantity(
+                          unitPrice > 0 ? nextAmount / unitPrice : 0,
+                        );
+                      }}
+                      step="any"
+                      type="number"
+                      value={amount || ""}
+                    />
+                    <button
+                      className={secondaryButtonClassName}
+                      disabled={!selectedHolding || unitPrice <= 0}
+                      onClick={() => {
+                        const nextQuantity = selectedHolding?.quantity ?? 0;
+                        const nextAmount = nextQuantity * unitPrice;
+
+                        setQuantity(nextQuantity);
+                        setAmount(nextAmount);
+                      }}
+                      type="button"
+                    >
+                      Max
+                    </button>
+                  </div>
+                </Field>
                 <Field label={`Price (${selectedHolding?.costCurrency ?? position.costCurrency})`}>
                   <input
                     className={inputClassName}
                     min="0"
                     name="unitPrice"
-                    onChange={(event) =>
-                      setUnitPrice(event.target.valueAsNumber || 0)
-                    }
+                    onChange={(event) => {
+                      const nextUnitPrice = event.target.valueAsNumber || 0;
+
+                      setUnitPrice(nextUnitPrice);
+                      setAmount(quantity * nextUnitPrice);
+                    }}
                     required
                     step="any"
                     type="number"
@@ -346,6 +421,30 @@ function getErrorMessage(error: unknown): string {
   }
 
   return "Unable to sell asset.";
+}
+
+async function fetchCurrentPrice(position: PositionSellValue): Promise<number | null> {
+  const params = new URLSearchParams({
+    name: position.name,
+    provider: position.provider,
+    providerSymbol: position.providerSymbol || position.symbol,
+    symbol: position.symbol,
+    type: position.assetType,
+  });
+  const response = await fetch(`/api/assets/profile?${params}`);
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as {
+    profile?: {
+      currentPrice?: number | null;
+    } | null;
+  };
+  const price = data.profile?.currentPrice;
+
+  return typeof price === "number" && Number.isFinite(price) ? price : null;
 }
 
 const inputClassName =

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AssetType, InvestmentIntent } from "@prisma/client";
 import { AssetSearchFields } from "@/components/portfolio/asset-search-fields";
@@ -77,6 +77,7 @@ export function PositionFormModal({
   const [averageCost, setAverageCost] = useState(
     mode === "edit" ? position?.averageCost ?? 0 : defaultAsset?.latestPrice?.price ?? 0,
   );
+  const [amount, setAmount] = useState(quantity * averageCost);
   const [isCostCurrencyLocked, setIsCostCurrencyLocked] = useState(
     defaultAsset?.provider !== undefined && defaultAsset.provider !== "manual",
   );
@@ -92,6 +93,29 @@ export function PositionFormModal({
       cashBalance.platform === selectedExchange &&
       cashBalance.currency === costCurrency,
   );
+
+  useEffect(() => {
+    if (!isOpen || mode !== "create" || !defaultAsset) {
+      return;
+    }
+
+    let isActive = true;
+
+    fetchCurrentPrice(defaultAsset)
+      .then((price) => {
+        if (!isActive || price === null) {
+          return;
+        }
+
+        setAverageCost(price);
+        setAmount(0);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isActive = false;
+    };
+  }, [defaultAsset, isOpen, mode]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,6 +147,7 @@ export function PositionFormModal({
         setSelectedExchange("");
         setQuantity(0);
         setAverageCost(0);
+        setAmount(0);
         setIsCostCurrencyLocked(false);
       }
 
@@ -165,7 +190,10 @@ export function PositionFormModal({
               setCostCurrency(defaultAsset?.costCurrency ?? baseCurrency);
               setSelectedExchange("");
               setQuantity(0);
-              setAverageCost(defaultAsset?.latestPrice?.price ?? 0);
+              const nextAverageCost = defaultAsset?.latestPrice?.price ?? 0;
+
+              setAverageCost(nextAverageCost);
+              setAmount(0);
               setIsCostCurrencyLocked(
                 defaultAsset?.provider !== undefined &&
                   defaultAsset.provider !== "manual",
@@ -218,40 +246,90 @@ export function PositionFormModal({
                   setCostCurrency(currency);
                   setIsCostCurrencyLocked(isLocked);
                 }}
+                onAssetSelected={(asset) => {
+                  fetchCurrentPrice(asset)
+                    .then((price) => {
+                      if (price === null) {
+                        return;
+                      }
+
+                      setAverageCost(price);
+                      setAmount(quantity * price);
+                    })
+                    .catch(() => undefined);
+                }}
                 onExchangeChange={setSelectedExchange}
               />
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Quantity">
                   <input
                     className={inputClassName}
-                    defaultValue={mode === "edit" ? position?.quantity ?? "" : ""}
                     min="0"
                     name="quantity"
-                    onChange={(event) =>
-                      setQuantity(event.target.valueAsNumber || 0)
-                    }
+                    onChange={(event) => {
+                      const nextQuantity = event.target.valueAsNumber || 0;
+
+                      setQuantity(nextQuantity);
+                      setAmount(nextQuantity * averageCost);
+                    }}
                     required
                     step="any"
                     type="number"
+                    value={quantity || ""}
                   />
+                </Field>
+                <Field label={`Amount in ${costCurrency}`}>
+                  <div className="flex gap-2">
+                    <input
+                      className={inputClassName}
+                      min="0"
+                      onChange={(event) => {
+                        const nextAmount = event.target.valueAsNumber || 0;
+
+                        setAmount(nextAmount);
+                        setQuantity(
+                          averageCost > 0 ? nextAmount / averageCost : 0,
+                        );
+                      }}
+                      step="any"
+                      type="number"
+                      value={amount || ""}
+                    />
+                    {mode === "create" ? (
+                      <button
+                        className={secondaryButtonClassName}
+                        disabled={!selectedCashBalance || averageCost <= 0}
+                        onClick={() => {
+                          const nextAmount = selectedCashBalance?.amount ?? 0;
+
+                          setAmount(nextAmount);
+                          setQuantity(
+                            averageCost > 0 ? nextAmount / averageCost : 0,
+                          );
+                        }}
+                        type="button"
+                      >
+                        Max
+                      </button>
+                    ) : null}
+                  </div>
                 </Field>
                 <Field label="Avg cost per unit">
                   <input
                     className={inputClassName}
-                    defaultValue={
-                      mode === "edit"
-                        ? position?.averageCost ?? ""
-                        : defaultAsset?.latestPrice?.price ?? ""
-                    }
                     min="0"
                     name="averageCost"
-                    onChange={(event) =>
-                      setAverageCost(event.target.valueAsNumber || 0)
-                    }
+                    onChange={(event) => {
+                      const nextAverageCost = event.target.valueAsNumber || 0;
+
+                      setAverageCost(nextAverageCost);
+                      setAmount(quantity * nextAverageCost);
+                    }}
                     required
                     step="any"
                     type="number"
+                    value={averageCost || ""}
                   />
                 </Field>
               </div>
@@ -484,6 +562,36 @@ function getCashValidationError(
   }
 
   return null;
+}
+
+async function fetchCurrentPrice(asset: {
+  provider: string;
+  providerSymbol: string;
+  symbol: string;
+  name: string;
+  assetType: AssetType;
+}): Promise<number | null> {
+  const params = new URLSearchParams({
+    name: asset.name,
+    provider: asset.provider,
+    providerSymbol: asset.providerSymbol || asset.symbol,
+    symbol: asset.symbol,
+    type: asset.assetType,
+  });
+  const response = await fetch(`/api/assets/profile?${params}`);
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as {
+    profile?: {
+      currentPrice?: number | null;
+    } | null;
+  };
+  const price = data.profile?.currentPrice;
+
+  return typeof price === "number" && Number.isFinite(price) ? price : null;
 }
 
 function getFormString(formData: FormData, name: string): string {

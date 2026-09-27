@@ -115,7 +115,7 @@ export function CashFormModal({
               key={formKey}
               onSubmit={handleSubmit}
             >
-              {cashBalance ? (
+              {mode === "edit" && cashBalance ? (
                 <input
                   name="cashBalanceId"
                   type="hidden"

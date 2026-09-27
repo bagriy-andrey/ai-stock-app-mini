@@ -31,6 +31,7 @@ export function CashActionsMenu({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [withdrawFormKey, setWithdrawFormKey] = useState(0);
@@ -118,6 +119,16 @@ export function CashActionsMenu({
           <button
             className="h-9 w-full rounded px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
             onClick={() => {
+              setIsAddOpen(true);
+              setIsOpen(false);
+            }}
+            type="button"
+          >
+            Add
+          </button>
+          <button
+            className="h-9 w-full rounded px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            onClick={() => {
               setIsEditOpen(true);
               setIsOpen(false);
             }}
@@ -150,6 +161,16 @@ export function CashActionsMenu({
         document.body,
       )
         : null}
+      <CashFormModal
+        action={updateAction}
+        baseCurrency={baseCurrency}
+        cashBalance={{ ...cashBalance, amount: 0 }}
+        exchangeOptions={exchangeOptions}
+        isOpen={isAddOpen}
+        mode="create"
+        onOpenChange={setIsAddOpen}
+        showTrigger={false}
+      />
       <CashFormModal
         action={updateAction}
         baseCurrency={baseCurrency}
