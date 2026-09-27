@@ -6,18 +6,12 @@ import {
   updatePosition,
   upsertCashBalance,
 } from "@/app/portfolio/actions";
-import { CashActionsMenu } from "@/components/portfolio/cash-actions-menu";
-import { CashFormModal } from "@/components/portfolio/cash-form-modal";
-import { PositionActionsMenu } from "@/components/portfolio/position-actions-menu";
-import { PositionFormModal } from "@/components/portfolio/position-form-modal";
+import { PortfolioTablesTabs } from "@/components/portfolio/portfolio-tables-tabs";
 import { getPortfolioSummary } from "@/lib/portfolio/repository";
 
 export const dynamic = "force-dynamic";
 
 type PortfolioSummary = Awaited<ReturnType<typeof getPortfolioSummary>>;
-type PortfolioPosition = PortfolioSummary["positions"][number];
-type PositionValuation = PortfolioSummary["valuation"]["positions"][number];
-type CashBalance = PortfolioSummary["cashBalances"][number];
 
 export default async function PortfolioPage() {
   let portfolio: PortfolioSummary;
@@ -87,62 +81,17 @@ export default async function PortfolioPage() {
           />
         </section>
 
-        <section className="grid gap-5">
-          <div className="flex flex-col gap-4">
-            <PositionsTable
-              addButton={
-                <PositionFormModal
-                  action={createPosition}
-                  assetType="CRYPTO"
-                  baseCurrency={portfolio.baseCurrency}
-                  mode="create"
-                />
-              }
-              baseCurrency={portfolio.baseCurrency}
-              emptyText="No crypto positions yet."
-              positions={portfolio.positions.filter(
-                (position) => position.assetType === "CRYPTO",
-              )}
-              title="Crypto"
-              valuationPositions={portfolio.valuation.positions}
-            />
-            <PositionsTable
-              addButton={
-                <PositionFormModal
-                  action={createPosition}
-                  assetType="STOCK"
-                  baseCurrency={portfolio.baseCurrency}
-                  mode="create"
-                />
-              }
-              baseCurrency={portfolio.baseCurrency}
-              emptyText="No stock positions yet."
-              positions={portfolio.positions.filter(
-                (position) => position.assetType === "STOCK",
-              )}
-              title="Stocks"
-              valuationPositions={portfolio.valuation.positions}
-            />
-            <PositionsTable
-              addButton={
-                <PositionFormModal
-                  action={createPosition}
-                  assetType="ETF"
-                  baseCurrency={portfolio.baseCurrency}
-                  mode="create"
-                />
-              }
-              baseCurrency={portfolio.baseCurrency}
-              emptyText="No ETF positions yet."
-              positions={portfolio.positions.filter(
-                (position) => position.assetType === "ETF",
-              )}
-              title="ETFs"
-              valuationPositions={portfolio.valuation.positions}
-            />
-            <CashTable cashBalances={portfolio.cashBalances} />
-          </div>
-        </section>
+        <PortfolioTablesTabs
+          baseCurrency={portfolio.baseCurrency}
+          cashBalances={portfolio.cashBalances}
+          createPositionAction={createPosition}
+          deleteCashBalanceAction={deleteCashBalance}
+          deletePositionAction={deletePosition}
+          positions={portfolio.positions}
+          upsertCashBalanceAction={upsertCashBalance}
+          updatePositionAction={updatePosition}
+          valuationPositions={portfolio.valuation.positions}
+        />
       </div>
     </main>
   );
@@ -176,187 +125,6 @@ function PortfolioSetupState({ error }: { error: unknown }) {
         </section>
       </div>
     </main>
-  );
-}
-
-function PositionsTable({
-  title,
-  positions,
-  valuationPositions,
-  baseCurrency,
-  emptyText,
-  addButton,
-}: {
-  title: string;
-  positions: PortfolioPosition[];
-  valuationPositions: PositionValuation[];
-  baseCurrency: string;
-  emptyText: string;
-  addButton?: React.ReactNode;
-}) {
-  return (
-    <section className="rounded border border-zinc-200 bg-white">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-        <div>
-          <h2 className="text-sm font-semibold uppercase text-zinc-500">
-            {title}
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            {positions.length} positions
-          </p>
-        </div>
-        {addButton}
-      </div>
-      {positions.length === 0 ? (
-        <p className="px-4 py-8 text-sm text-zinc-600">{emptyText}</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Asset</th>
-                <th className="px-4 py-3 font-semibold">Quantity</th>
-                <th className="px-4 py-3 font-semibold">Avg cost</th>
-                <th className="px-4 py-3 font-semibold">Latest price</th>
-                <th className="px-4 py-3 font-semibold">Value</th>
-                <th className="px-4 py-3 font-semibold">P&L</th>
-                <th className="px-4 py-3 font-semibold">Weight</th>
-                <th className="px-4 py-3 font-semibold">Intent</th>
-                <th className="px-4 py-3 font-semibold">Operation</th>
-                <th className="px-4 py-3 font-semibold">Notes</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-200">
-              {positions.map((position) => {
-                const valuation = valuationPositions.find(
-                  (item) => item.id === position.id,
-                );
-
-                return (
-                  <tr key={position.id}>
-                    <td className="px-4 py-3 align-top">
-                      <div className="font-medium text-zinc-950">
-                        {position.symbol}
-                      </div>
-                      <div className="max-w-56 truncate text-xs text-zinc-500">
-                        {position.name}
-                      </div>
-                      <div className="text-xs text-zinc-500">
-                        {position.provider} / {position.assetCurrency}
-                        {position.exchange ? ` / ${position.exchange}` : ""}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {formatNumber(position.quantity)}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {formatMoney(position.averageCost, position.costCurrency)}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {position.latestPrice
-                        ? formatMoney(
-                            position.latestPrice.price,
-                            position.latestPrice.currency,
-                          )
-                        : "Missing"}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {formatMaybeMoney(
-                        valuation?.marketValue ?? null,
-                        position.latestPrice?.currency ?? position.costCurrency,
-                      )}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {formatMaybeMoney(
-                        valuation?.unrealizedPnl ?? null,
-                        position.costCurrency,
-                      )}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {formatMaybePercent(valuation?.weight ?? null)}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {formatEnum(position.investmentIntent)}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      {formatDisplayDate(position.openedAt)}
-                    </td>
-                    <td className="max-w-48 truncate px-4 py-3 align-top text-zinc-600">
-                      {position.notes ?? ""}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <PositionActionsMenu
-                        baseCurrency={baseCurrency}
-                        deleteAction={deletePosition}
-                        position={position}
-                        updateAction={updatePosition}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function CashTable({ cashBalances }: { cashBalances: CashBalance[] }) {
-  return (
-    <section className="rounded border border-zinc-200 bg-white">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-        <div>
-          <h2 className="text-sm font-semibold uppercase text-zinc-500">
-            Free Cash
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            {cashBalances.length} balances
-          </p>
-        </div>
-        <CashFormModal action={upsertCashBalance} mode="create" />
-      </div>
-      {cashBalances.length === 0 ? (
-        <p className="px-4 py-8 text-sm text-zinc-600">
-          No free cash balances yet.
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Platform</th>
-                <th className="px-4 py-3 font-semibold">Currency</th>
-                <th className="px-4 py-3 font-semibold">Amount</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-200">
-              {cashBalances.map((cashBalance) => (
-                <tr key={cashBalance.id}>
-                  <td className="px-4 py-3 font-medium">
-                    {cashBalance.platform}
-                  </td>
-                  <td className="px-4 py-3">{cashBalance.currency}</td>
-                  <td className="px-4 py-3">
-                    {formatMoney(cashBalance.amount, cashBalance.currency)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <CashActionsMenu
-                      cashBalance={cashBalance}
-                      deleteAction={deleteCashBalance}
-                      updateAction={upsertCashBalance}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -394,37 +162,10 @@ function formatMaybeMoney(value: number | null, currency: string): string {
   return value === null ? "N/A" : formatMoney(value, currency);
 }
 
-function formatMaybePercent(value: number | null): string {
-  if (value === null) {
-    return "N/A";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 2,
-    style: "percent",
-  }).format(value);
-}
-
-function formatEnum(value: string): string {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 8,
   }).format(value);
-}
-
-function formatDisplayDate(value: Date | null): string {
-  if (!value) {
-    return "N/A";
-  }
-
-  return new Intl.DateTimeFormat("en-GB").format(value);
 }
 
 function getErrorMessage(error: unknown): string {

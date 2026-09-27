@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CashFormModal } from "@/components/portfolio/cash-form-modal";
+import { ConfirmDeleteButton } from "@/components/portfolio/confirm-delete-button";
 
 type CashValue = {
   id: string;
@@ -20,9 +21,36 @@ export function CashActionsMenu({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   return (
-    <div className="relative inline-flex">
+    <div className="relative inline-flex" ref={menuRef}>
       <button
         aria-label="Cash actions"
         className="h-8 w-8 rounded border border-zinc-300 text-lg leading-none text-zinc-700 hover:bg-zinc-100"
@@ -38,19 +66,13 @@ export function CashActionsMenu({
             cashBalance={cashBalance}
             mode="edit"
           />
-          <form action={deleteAction}>
-            <input
-              name="cashBalanceId"
-              type="hidden"
-              value={cashBalance.id}
-            />
-            <button
-              className="h-9 w-full rounded px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
-              type="submit"
-            >
-              Delete
-            </button>
-          </form>
+          <ConfirmDeleteButton
+            action={deleteAction}
+            description={`Delete ${cashBalance.currency} cash on ${cashBalance.platform}? This cannot be undone.`}
+            hiddenName="cashBalanceId"
+            hiddenValue={cashBalance.id}
+            title="Delete cash balance"
+          />
         </div>
       )}
     </div>

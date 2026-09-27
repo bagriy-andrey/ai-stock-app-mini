@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AssetType, InvestmentIntent } from "@prisma/client";
+import { ConfirmDeleteButton } from "@/components/portfolio/confirm-delete-button";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 
 type PositionActionValue = {
@@ -33,9 +34,36 @@ export function PositionActionsMenu({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   return (
-    <div className="relative inline-flex">
+    <div className="relative inline-flex" ref={menuRef}>
       <button
         aria-label="Position actions"
         className="h-8 w-8 rounded border border-zinc-300 text-lg leading-none text-zinc-700 hover:bg-zinc-100"
@@ -53,15 +81,13 @@ export function PositionActionsMenu({
             mode="edit"
             position={position}
           />
-          <form action={deleteAction}>
-            <input name="positionId" type="hidden" value={position.id} />
-            <button
-              className="h-9 w-full rounded px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
-              type="submit"
-            >
-              Delete
-            </button>
-          </form>
+          <ConfirmDeleteButton
+            action={deleteAction}
+            description={`Delete ${position.symbol} from this portfolio? This cannot be undone.`}
+            hiddenName="positionId"
+            hiddenValue={position.id}
+            title="Delete position"
+          />
         </div>
       )}
     </div>
