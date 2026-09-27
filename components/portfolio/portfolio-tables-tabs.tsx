@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { AssetType, InvestmentIntent } from "@prisma/client";
+import type {
+  AssetType,
+  InvestmentIntent,
+  PortfolioActivityType,
+} from "@prisma/client";
 import { CashActionsMenu } from "@/components/portfolio/cash-actions-menu";
 import { CashFormModal } from "@/components/portfolio/cash-form-modal";
 import { PositionActionsMenu } from "@/components/portfolio/position-actions-menu";
@@ -43,34 +47,49 @@ type CashBalance = {
   amount: number;
 };
 
-type ActiveTab = "CRYPTO" | "STOCK" | "ETF" | "CASH";
+type PortfolioActivityLog = {
+  id: string;
+  type: PortfolioActivityType;
+  platform: string | null;
+  currency: string | null;
+  amount: number | null;
+  description: string;
+  createdAt: Date;
+};
+
+type ActiveTab = "CRYPTO" | "STOCK" | "ETF" | "CASH" | "ACTIVITY";
 
 const tabs: Array<{ id: ActiveTab; label: string }> = [
   { id: "CRYPTO", label: "Crypto" },
   { id: "STOCK", label: "Stocks" },
   { id: "ETF", label: "ETF" },
   { id: "CASH", label: "Cash" },
+  { id: "ACTIVITY", label: "Activity" },
 ];
 
 export function PortfolioTablesTabs({
   positions,
   valuationPositions,
   cashBalances,
+  activityLogs,
   baseCurrency,
   createPositionAction,
   updatePositionAction,
   deletePositionAction,
   upsertCashBalanceAction,
+  withdrawCashBalanceAction,
   deleteCashBalanceAction,
 }: {
   positions: PortfolioPosition[];
   valuationPositions: PositionValuation[];
   cashBalances: CashBalance[];
+  activityLogs: PortfolioActivityLog[];
   baseCurrency: string;
   createPositionAction: (formData: FormData) => Promise<void>;
   updatePositionAction: (formData: FormData) => Promise<void>;
   deletePositionAction: (formData: FormData) => Promise<void>;
   upsertCashBalanceAction: (formData: FormData) => Promise<void>;
+  withdrawCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("CRYPTO");
@@ -85,7 +104,7 @@ export function PortfolioTablesTabs({
               activeTab === tab.id
                 ? "border-zinc-950 text-zinc-950"
                 : "border-transparent text-zinc-500 hover:text-zinc-950"
-            }`}
+            } ${tab.id === "ACTIVITY" ? "ml-auto" : ""}`}
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             type="button"
@@ -174,7 +193,12 @@ export function PortfolioTablesTabs({
           deleteAction={deleteCashBalanceAction}
           exchangeOptions={exchangeOptions}
           upsertAction={upsertCashBalanceAction}
+          withdrawAction={withdrawCashBalanceAction}
         />
+      )}
+
+      {activeTab === "ACTIVITY" && (
+        <ActivityTable activityLogs={activityLogs} />
       )}
     </section>
   );
@@ -320,12 +344,14 @@ function CashTable({
   baseCurrency,
   exchangeOptions,
   upsertAction,
+  withdrawAction,
   deleteAction,
 }: {
   cashBalances: CashBalance[];
   baseCurrency: string;
   exchangeOptions: string[];
   upsertAction: (formData: FormData) => Promise<void>;
+  withdrawAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   return (
@@ -375,10 +401,73 @@ function CashTable({
                     <CashActionsMenu
                       baseCurrency={baseCurrency}
                       cashBalance={cashBalance}
+                      cashBalances={cashBalances}
                       deleteAction={deleteAction}
                       exchangeOptions={exchangeOptions}
                       updateAction={upsertAction}
+                      withdrawAction={withdrawAction}
                     />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActivityTable({
+  activityLogs,
+}: {
+  activityLogs: PortfolioActivityLog[];
+}) {
+  return (
+    <section className="rounded border border-zinc-200 bg-white">
+      <div className="border-b border-zinc-200 px-4 py-3">
+        <h2 className="text-sm font-semibold uppercase text-zinc-500">
+          Activity
+        </h2>
+        <p className="mt-1 text-xs text-zinc-500">
+          {activityLogs.length} log entries
+        </p>
+      </div>
+      {activityLogs.length === 0 ? (
+        <p className="px-4 py-8 text-sm text-zinc-600">
+          No portfolio activity yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Date</th>
+                <th className="px-4 py-3 font-semibold">Type</th>
+                <th className="px-4 py-3 font-semibold">Exchange</th>
+                <th className="px-4 py-3 font-semibold">Amount</th>
+                <th className="px-4 py-3 font-semibold">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200">
+              {activityLogs.map((activityLog) => (
+                <tr key={activityLog.id}>
+                  <td className="px-4 py-3 align-top">
+                    {formatDisplayDateTime(activityLog.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    {formatEnum(activityLog.type)}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    {activityLog.platform ?? "N/A"}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    {activityLog.amount !== null && activityLog.currency
+                      ? formatMoney(activityLog.amount, activityLog.currency)
+                      : "N/A"}
+                  </td>
+                  <td className="px-4 py-3 align-top text-zinc-600">
+                    {activityLog.description}
                   </td>
                 </tr>
               ))}
@@ -437,6 +526,13 @@ function formatDisplayDate(value: Date | null): string {
   }
 
   return new Intl.DateTimeFormat("en-GB").format(value);
+}
+
+function formatDisplayDateTime(value: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
 }
 
 function getExchangeOptions(

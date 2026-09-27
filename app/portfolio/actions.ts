@@ -1,6 +1,8 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import type { PortfolioActivityType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import {
   calculatePurchaseCost,
@@ -13,6 +15,7 @@ import {
 import {
   cashBalanceDeleteFormSchema,
   cashBalanceFormSchema,
+  cashWithdrawalFormSchema,
   portfolioBaseCurrencyFormSchema,
   positionDeleteFormSchema,
   positionFormSchema,
@@ -212,25 +215,95 @@ export async function upsertCashBalance(formData: FormData) {
     return;
   }
 
-  await prisma.cashBalance.upsert({
-    where: {
-      portfolioId_platform_currency: {
+  await prisma.$transaction(async (tx) => {
+    await tx.cashBalance.upsert({
+      where: {
+        portfolioId_platform_currency: {
+          portfolioId: portfolio.id,
+          platform: input.platform,
+          currency: input.currency,
+        },
+      },
+      create: {
         portfolioId: portfolio.id,
         platform: input.platform,
         currency: input.currency,
+        amount: input.amount,
       },
-    },
-    create: {
+      update: {
+        amount: {
+          increment: input.amount,
+        },
+      },
+    });
+
+    await createPortfolioActivityLog(tx, {
       portfolioId: portfolio.id,
+      type: "CASH_DEPOSIT",
       platform: input.platform,
       currency: input.currency,
       amount: input.amount,
-    },
-    update: {
-      amount: {
-        increment: input.amount,
+      description: `Deposited ${input.amount} ${input.currency} to ${input.platform}.`,
+    });
+  });
+
+  revalidatePath(PORTFOLIO_PATH);
+}
+
+export async function withdrawCashBalance(formData: FormData) {
+  const input = cashWithdrawalFormSchema.parse(Object.fromEntries(formData));
+  const portfolio = await getOrCreateDefaultPortfolio();
+
+  await prisma.$transaction(async (tx) => {
+    const cashBalance = await tx.cashBalance.findUnique({
+      where: {
+        id: input.cashBalanceId,
       },
-    },
+    });
+
+    if (
+      !cashBalance ||
+      cashBalance.portfolioId !== portfolio.id ||
+      cashBalance.platform !== input.platform ||
+      cashBalance.currency !== input.currency
+    ) {
+      throw new Error("Selected cash balance is no longer available.");
+    }
+
+    if (cashBalance.amount.toNumber() < input.amount) {
+      throw new Error(
+        `Insufficient ${input.currency} cash on ${input.platform}. Available: ${cashBalance.amount.toNumber()}, requested: ${input.amount}.`,
+      );
+    }
+
+    const cashUpdate = await tx.cashBalance.updateMany({
+      where: {
+        id: cashBalance.id,
+        amount: {
+          gte: input.amount,
+        },
+      },
+      data: {
+        amount: {
+          decrement: input.amount,
+        },
+      },
+    });
+
+    if (cashUpdate.count !== 1) {
+      throw new Error(
+        `Insufficient ${input.currency} cash on ${input.platform}. Refresh and try again.`,
+      );
+    }
+
+    await createPortfolioActivityLog(tx, {
+      portfolioId: portfolio.id,
+      type: "CASH_WITHDRAWAL",
+      platform: input.platform,
+      currency: input.currency,
+      amount: input.amount,
+      description: `Withdrew ${input.amount} ${input.currency} from ${input.platform}.`,
+    });
   });
 
   revalidatePath(PORTFOLIO_PATH);
@@ -262,4 +335,61 @@ export async function updateBaseCurrency(formData: FormData) {
   });
 
   revalidatePath(PORTFOLIO_PATH);
+}
+
+async function createPortfolioActivityLog(
+  tx: Prisma.TransactionClient,
+  input: {
+    portfolioId: string;
+    type: PortfolioActivityType;
+    platform: string;
+    currency: string;
+    amount: number;
+    description: string;
+  },
+) {
+  const txWithActivityLog = tx as Prisma.TransactionClient & {
+    portfolioActivityLog?: {
+      create: (args: {
+        data: {
+          portfolioId: string;
+          type: PortfolioActivityType;
+          platform: string;
+          currency: string;
+          amount: number;
+          description: string;
+        };
+      }) => Promise<unknown>;
+    };
+  };
+
+  if (txWithActivityLog.portfolioActivityLog) {
+    await txWithActivityLog.portfolioActivityLog.create({
+      data: input,
+    });
+    return;
+  }
+
+  try {
+    const activityLogId = randomUUID();
+
+    await tx.$executeRaw`
+      INSERT INTO "PortfolioActivityLog"
+        ("id", "portfolioId", "type", "platform", "currency", "amount", "description", "createdAt")
+      VALUES
+        (${activityLogId}, ${input.portfolioId}, ${input.type}::"PortfolioActivityType", ${input.platform}, ${input.currency}, ${input.amount}, ${input.description}, CURRENT_TIMESTAMP)
+    `;
+  } catch (error) {
+    throw new Error(
+      `Portfolio activity log storage is not ready. Run npm run prisma:generate, npm run prisma:migrate, restart the dev server, then try again. ${getErrorMessage(error)}`,
+    );
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Unknown error";
 }

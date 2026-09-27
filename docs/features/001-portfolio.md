@@ -54,6 +54,8 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - User edits quantity or average price
 - User removes a position
 - User adds cash for an existing platform/currency and the system increases that balance
+- User withdraws cash from an existing exchange/currency balance, with the withdrawal amount capped at the available balance
+- System logs cash deposits and withdrawals in portfolio activity history
 - System refreshes prices
 - System recalculates value, P&L, and weights
 
@@ -66,6 +68,7 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - Asset symbol changes
 - Missing free cash for a new exchange/platform
 - Insufficient free cash on an existing exchange/platform and cost currency
+- Withdrawal amount greater than the selected exchange/currency cash balance
 
 ## Dependencies
 

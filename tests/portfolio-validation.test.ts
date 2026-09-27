@@ -2,6 +2,7 @@ import { AssetType, InvestmentIntent } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import {
   cashBalanceFormSchema,
+  cashWithdrawalFormSchema,
   positionFormSchema,
 } from "@/lib/portfolio/validation";
 
@@ -108,6 +109,40 @@ describe("portfolio form validation", () => {
         platform: "Bank",
         currency: "USD",
         amount: "-1",
+      }),
+    ).toThrow();
+  });
+
+  it("validates cash withdrawals", () => {
+    expect(
+      cashWithdrawalFormSchema.parse({
+        cashBalanceId: "cash-1",
+        platform: "Binance",
+        currency: " usd ",
+        amount: "50",
+      }),
+    ).toEqual({
+      cashBalanceId: "cash-1",
+      platform: "Binance",
+      currency: "USD",
+      amount: 50,
+    });
+
+    expect(() =>
+      cashWithdrawalFormSchema.parse({
+        cashBalanceId: "cash-1",
+        platform: "Binance",
+        currency: "USD",
+        amount: "-1",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      cashWithdrawalFormSchema.parse({
+        cashBalanceId: "cash-1",
+        platform: "Binance",
+        currency: "USD",
+        amount: "0",
       }),
     ).toThrow();
   });

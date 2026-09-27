@@ -6,6 +6,7 @@ import {
   updateBaseCurrency,
   updatePosition,
   upsertCashBalance,
+  withdrawCashBalance,
 } from "@/app/portfolio/actions";
 import { BaseCurrencySelect } from "@/components/portfolio/base-currency-select";
 import { PortfolioTablesTabs } from "@/components/portfolio/portfolio-tables-tabs";
@@ -94,6 +95,7 @@ export default async function PortfolioPage() {
         </section>
 
         <PortfolioTablesTabs
+          activityLogs={portfolio.activityLogs}
           baseCurrency={portfolio.baseCurrency}
           cashBalances={portfolio.cashBalances}
           createPositionAction={createPosition}
@@ -103,6 +105,7 @@ export default async function PortfolioPage() {
           upsertCashBalanceAction={upsertCashBalance}
           updatePositionAction={updatePosition}
           valuationPositions={portfolio.valuation.positions}
+          withdrawCashBalanceAction={withdrawCashBalance}
         />
       </div>
     </main>
@@ -110,6 +113,8 @@ export default async function PortfolioPage() {
 }
 
 function PortfolioSetupState({ error }: { error: unknown }) {
+  const guidance = getPortfolioSetupGuidance(error);
+
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-5 py-6">
@@ -128,16 +133,29 @@ function PortfolioSetupState({ error }: { error: unknown }) {
             Database unavailable
           </h2>
           <p className="mt-2 text-sm leading-6 text-amber-900">
-            Set `DATABASE_URL`, run `npx prisma migrate dev`, then reload this
-            page.
+            {guidance}
           </p>
-          <pre className="mt-3 overflow-auto rounded border border-amber-200 bg-white p-3 text-xs text-zinc-700">
+          <pre className="mt-3 max-h-96 overflow-auto rounded border border-amber-200 bg-white p-3 text-xs text-zinc-700">
             {getErrorMessage(error)}
           </pre>
         </section>
       </div>
     </main>
   );
+}
+
+function getPortfolioSetupGuidance(error: unknown): string {
+  const message = getErrorMessage(error);
+
+  if (message.includes("activityLogs")) {
+    return "Portfolio activity history requires the latest Prisma client and database migration. Run `npm run prisma:generate`, restart the dev server, run `npm run prisma:migrate`, then reload this page.";
+  }
+
+  if (message.includes("Can't reach database server")) {
+    return "PostgreSQL is not reachable. Start the local database, check `DATABASE_URL`, run `npm run prisma:migrate`, then reload this page.";
+  }
+
+  return "Set `DATABASE_URL`, run `npm run prisma:migrate`, then reload this page.";
 }
 
 function SummaryMetric({

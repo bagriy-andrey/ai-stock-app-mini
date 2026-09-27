@@ -17,6 +17,7 @@ const optionalTextSchema = z
 const exchangeSchema = z.string().trim().min(1).max(80);
 
 const nonNegativeNumberSchema = z.coerce.number().finite().nonnegative();
+const positiveNumberSchema = z.coerce.number().finite().positive();
 const supportedCurrencySchema = z
   .string()
   .trim()
@@ -64,6 +65,13 @@ export const cashBalanceDeleteFormSchema = z.object({
   cashBalanceId: z.string().min(1),
 });
 
+export const cashWithdrawalFormSchema = z.object({
+  cashBalanceId: z.string().min(1),
+  platform: z.string().trim().min(1).max(80),
+  currency: supportedCurrencySchema,
+  amount: positiveNumberSchema,
+});
+
 export const portfolioBaseCurrencyFormSchema = z.object({
   baseCurrency: supportedCurrencySchema,
 });
@@ -71,3 +79,4 @@ export const portfolioBaseCurrencyFormSchema = z.object({
 export type PositionFormInput = z.infer<typeof positionFormSchema>;
 export type PositionUpdateFormInput = z.infer<typeof positionUpdateFormSchema>;
 export type CashBalanceFormInput = z.infer<typeof cashBalanceFormSchema>;
+export type CashWithdrawalFormInput = z.infer<typeof cashWithdrawalFormSchema>;

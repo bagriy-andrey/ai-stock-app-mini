@@ -10,6 +10,8 @@ import type {
   Asset,
   AssetType,
   Position,
+  PortfolioActivityLog,
+  PortfolioActivityType,
 } from "@prisma/client";
 
 const DEFAULT_PORTFOLIO_NAME = "Real Portfolio";
@@ -22,6 +24,7 @@ export type PortfolioSummary = {
   baseCurrency: string;
   positions: PortfolioPositionSummary[];
   cashBalances: CashBalanceSummary[];
+  activityLogs: PortfolioActivityLogSummary[];
   valuation: PortfolioValuation;
 };
 
@@ -53,6 +56,16 @@ export type CashBalanceSummary = {
   platform: string;
   currency: string;
   amount: number;
+};
+
+export type PortfolioActivityLogSummary = {
+  id: string;
+  type: PortfolioActivityType;
+  platform: string | null;
+  currency: string | null;
+  amount: number | null;
+  description: string;
+  createdAt: Date;
 };
 
 export async function getOrCreateDefaultPortfolio() {
@@ -108,6 +121,7 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
 
   const positions = portfolioWithData.positions.map(toPositionSummary);
   const cashBalances = portfolioWithData.cashBalances.map(toCashBalanceSummary);
+  const activityLogs = await getPortfolioActivityLogs(portfolioWithData.id);
   const fxRates = await getLatestPortfolioFxRates(
     portfolioWithData.baseCurrency,
   );
@@ -130,6 +144,7 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
     baseCurrency: portfolioWithData.baseCurrency,
     positions,
     cashBalances,
+    activityLogs,
     valuation,
   };
 }
@@ -217,4 +232,55 @@ function toCashBalanceSummary(cashBalance: CashBalance): CashBalanceSummary {
     currency: cashBalance.currency,
     amount: cashBalance.amount.toNumber(),
   };
+}
+
+function toPortfolioActivityLogSummary(
+  activityLog: PortfolioActivityLog,
+): PortfolioActivityLogSummary {
+  return {
+    id: activityLog.id,
+    type: activityLog.type,
+    platform: activityLog.platform,
+    currency: activityLog.currency,
+    amount: activityLog.amount?.toNumber() ?? null,
+    description: activityLog.description,
+    createdAt: activityLog.createdAt,
+  };
+}
+
+async function getPortfolioActivityLogs(
+  portfolioId: string,
+): Promise<PortfolioActivityLogSummary[]> {
+  try {
+    const activityLogs = await prisma.portfolioActivityLog.findMany({
+      where: {
+        portfolioId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 100,
+    });
+
+    return activityLogs.map(toPortfolioActivityLogSummary);
+  } catch (error) {
+    if (isMissingActivityLogStorageError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+function isMissingActivityLogStorageError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message.includes("portfolioActivityLog") ||
+    error.message.includes("PortfolioActivityLog") ||
+    error.message.includes("activityLogs") ||
+    error.message.includes("findMany")
+  );
 }

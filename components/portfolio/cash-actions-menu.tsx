@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CashFormModal } from "@/components/portfolio/cash-form-modal";
+import { CashWithdrawalModal } from "@/components/portfolio/cash-withdrawal-modal";
 import { ConfirmDeleteButton } from "@/components/portfolio/confirm-delete-button";
 
 type CashValue = {
@@ -14,15 +15,19 @@ type CashValue = {
 
 export function CashActionsMenu({
   cashBalance,
+  cashBalances,
   baseCurrency,
   exchangeOptions,
   updateAction,
+  withdrawAction,
   deleteAction,
 }: {
   cashBalance: CashValue;
+  cashBalances: CashValue[];
   baseCurrency: string;
   exchangeOptions: string[];
   updateAction: (formData: FormData) => Promise<void>;
+  withdrawAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,6 +114,11 @@ export function CashActionsMenu({
             cashBalance={cashBalance}
             exchangeOptions={exchangeOptions}
             mode="edit"
+          />
+          <CashWithdrawalModal
+            action={withdrawAction}
+            cashBalances={cashBalances}
+            defaultCashBalance={cashBalance}
           />
           <ConfirmDeleteButton
             action={deleteAction}

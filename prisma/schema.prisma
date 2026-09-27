@@ -29,6 +29,11 @@ enum WatchlistPriority {
   HIGH
 }
 
+enum PortfolioActivityType {
+  CASH_DEPOSIT
+  CASH_WITHDRAWAL
+}
+
 model AiUsageRecord {
   id           String       @id @default(cuid())
   agent        String
@@ -79,6 +84,7 @@ model Portfolio {
   updatedAt    DateTime      @updatedAt
   positions    Position[]
   cashBalances CashBalance[]
+  activityLogs PortfolioActivityLog[]
 }
 
 model Position {
@@ -114,6 +120,21 @@ model CashBalance {
 
   @@unique([portfolioId, platform, currency])
   @@index([portfolioId])
+}
+
+model PortfolioActivityLog {
+  id          String                @id @default(cuid())
+  portfolioId String
+  type        PortfolioActivityType
+  platform    String?
+  currency    String?
+  amount      Decimal?              @db.Decimal(24, 8)
+  description String
+  createdAt   DateTime              @default(now())
+  portfolio   Portfolio             @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, createdAt])
+  @@index([type])
 }
 
 model WatchlistItem {
