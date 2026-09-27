@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  createPortfolioExchange,
   createPosition,
   deleteActivityLog,
   deleteCashBalance,
@@ -10,6 +11,7 @@ import {
   withdrawCashBalance,
 } from "@/app/portfolio/actions";
 import { BaseCurrencySelect } from "@/components/portfolio/base-currency-select";
+import { ExchangeFormModal } from "@/components/portfolio/exchange-form-modal";
 import { PortfolioTablesTabs } from "@/components/portfolio/portfolio-tables-tabs";
 import { getPortfolioSummary } from "@/lib/portfolio/repository";
 
@@ -40,16 +42,19 @@ export default async function PortfolioPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <Link
-              className="h-9 rounded border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-              href="/"
-            >
-              Exit to home
-            </Link>
             <BaseCurrencySelect
               action={updateBaseCurrency}
               baseCurrency={portfolio.baseCurrency}
             />
+            <ExchangeFormModal action={createPortfolioExchange} />
+            <Link
+              aria-label="Exit to home"
+              className="grid size-9 place-items-center rounded border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
+              href="/"
+              title="Exit to home"
+            >
+              <HomeIcon />
+            </Link>
           </div>
         </header>
 
@@ -99,6 +104,7 @@ export default async function PortfolioPage() {
           activityLogs={portfolio.activityLogs}
           baseCurrency={portfolio.baseCurrency}
           cashBalances={portfolio.cashBalances}
+          exchanges={portfolio.exchanges}
           createPositionAction={createPosition}
           deleteActivityLogAction={deleteActivityLog}
           deleteCashBalanceAction={deleteCashBalance}
@@ -111,6 +117,25 @@ export default async function PortfolioPage() {
         />
       </div>
     </main>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="m3 11 9-8 9 8" />
+      <path d="M5 10v10h14V10" />
+      <path d="M9 20v-6h6v6" />
+    </svg>
   );
 }
 

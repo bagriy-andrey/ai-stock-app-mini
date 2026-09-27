@@ -312,7 +312,7 @@ export function PositionFormModal({
                 </button>
                 <button
                   className={primaryButtonClassName}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || exchangeOptions.length === 0}
                   type="submit"
                 >
                   {isSubmitting

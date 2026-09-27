@@ -41,6 +41,7 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 ## Core Data / Entities
 
 - Portfolio
+- PortfolioExchange
 - Position
 - CashBalance
 - Asset
@@ -51,10 +52,11 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - User adds a position
 - User adds an already-owned asset and the system increases quantity while recalculating weighted average cost
 - User can open an aggregated asset row and see the position quantity split by exchange/platform
-- User selects or enters the position exchange/platform, sees matching free cash for the cost currency when it exists, and the system deducts purchase cost from that cash balance when the position is added
+- User adds portfolio exchanges/platforms with a name and market type: crypto or stock
+- User selects the position exchange/platform from the exchanges added to the portfolio, sees matching free cash for the cost currency when it exists, and the system deducts purchase cost from that cash balance when the position is added
 - User edits quantity or average price
 - User removes a position
-- User adds cash for an existing platform/currency and the system increases that balance
+- User adds cash for an existing portfolio exchange/currency and the system increases that balance
 - User withdraws cash from an existing exchange/currency balance, with the withdrawal amount capped at the available balance
 - System logs cash deposits and withdrawals in portfolio activity history
 - System refreshes prices
@@ -68,6 +70,8 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 - Duplicate ticker with different intent
 - Asset symbol changes
 - Missing free cash for a new exchange/platform
+- No portfolio exchanges have been added yet
+- Selected exchange type does not match the asset operation type
 - Insufficient free cash on an existing exchange/platform and cost currency
 - Withdrawal amount greater than the selected exchange/currency cash balance
 

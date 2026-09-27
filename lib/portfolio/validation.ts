@@ -2,6 +2,8 @@ import { AssetType, InvestmentIntent } from "@prisma/client";
 import { z } from "zod";
 import { SUPPORTED_PORTFOLIO_CURRENCIES } from "@/lib/portfolio/currencies";
 
+export const portfolioExchangeTypes = ["CRYPTO", "STOCK"] as const;
+
 const symbolSchema = z
   .string()
   .trim()
@@ -80,7 +82,15 @@ export const portfolioBaseCurrencyFormSchema = z.object({
   baseCurrency: supportedCurrencySchema,
 });
 
+export const portfolioExchangeFormSchema = z.object({
+  name: exchangeSchema,
+  type: z.enum(portfolioExchangeTypes),
+});
+
 export type PositionFormInput = z.infer<typeof positionFormSchema>;
 export type PositionUpdateFormInput = z.infer<typeof positionUpdateFormSchema>;
 export type CashBalanceFormInput = z.infer<typeof cashBalanceFormSchema>;
 export type CashWithdrawalFormInput = z.infer<typeof cashWithdrawalFormSchema>;
+export type PortfolioExchangeFormInput = z.infer<
+  typeof portfolioExchangeFormSchema
+>;

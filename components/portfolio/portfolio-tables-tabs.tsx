@@ -59,6 +59,12 @@ type CashBalance = {
   amount: number;
 };
 
+type PortfolioExchange = {
+  id: string;
+  name: string;
+  type: "CRYPTO" | "STOCK";
+};
+
 type PortfolioActivityLog = {
   id: string;
   type: PortfolioActivityType;
@@ -82,6 +88,7 @@ export function PortfolioTablesTabs({
   positions,
   valuationPositions,
   cashBalances,
+  exchanges,
   activityLogs,
   baseCurrency,
   createPositionAction,
@@ -95,6 +102,7 @@ export function PortfolioTablesTabs({
   positions: PortfolioPosition[];
   valuationPositions: PositionValuation[];
   cashBalances: CashBalance[];
+  exchanges: PortfolioExchange[];
   activityLogs: PortfolioActivityLog[];
   baseCurrency: string;
   createPositionAction: (formData: FormData) => Promise<void>;
@@ -106,7 +114,9 @@ export function PortfolioTablesTabs({
   deleteActivityLogAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("CRYPTO");
-  const exchangeOptions = getExchangeOptions(positions, cashBalances);
+  const cryptoExchangeOptions = getExchangeOptions(exchanges, "CRYPTO");
+  const stockExchangeOptions = getExchangeOptions(exchanges, "STOCK");
+  const cashExchangeOptions = getExchangeOptions(exchanges);
 
   return (
     <section className="grid gap-4">
@@ -135,7 +145,7 @@ export function PortfolioTablesTabs({
               assetType="CRYPTO"
               baseCurrency={baseCurrency}
               cashBalances={cashBalances}
-              exchangeOptions={exchangeOptions}
+              exchangeOptions={cryptoExchangeOptions}
               mode="create"
             />
           }
@@ -143,7 +153,7 @@ export function PortfolioTablesTabs({
           cashBalances={cashBalances}
           deleteAction={deletePositionAction}
           emptyText="No crypto positions yet."
-          exchangeOptions={exchangeOptions}
+          exchangeOptions={cryptoExchangeOptions}
           positions={positions.filter((position) => position.assetType === "CRYPTO")}
           title="Crypto"
           updateAction={updatePositionAction}
@@ -159,7 +169,7 @@ export function PortfolioTablesTabs({
               assetType="STOCK"
               baseCurrency={baseCurrency}
               cashBalances={cashBalances}
-              exchangeOptions={exchangeOptions}
+              exchangeOptions={stockExchangeOptions}
               mode="create"
             />
           }
@@ -167,7 +177,7 @@ export function PortfolioTablesTabs({
           cashBalances={cashBalances}
           deleteAction={deletePositionAction}
           emptyText="No stock or ETF positions yet."
-          exchangeOptions={exchangeOptions}
+          exchangeOptions={stockExchangeOptions}
           positions={positions.filter((position) =>
             ["STOCK", "ETF"].includes(position.assetType),
           )}
@@ -182,7 +192,7 @@ export function PortfolioTablesTabs({
           baseCurrency={baseCurrency}
           cashBalances={cashBalances}
           deleteAction={deleteCashBalanceAction}
-          exchangeOptions={exchangeOptions}
+          exchangeOptions={cashExchangeOptions}
           upsertAction={upsertCashBalanceAction}
           withdrawAction={withdrawCashBalanceAction}
         />
@@ -846,17 +856,11 @@ function formatDisplayDateTime(value: Date): string {
 }
 
 function getExchangeOptions(
-  positions: PortfolioPosition[],
-  cashBalances: CashBalance[],
+  exchanges: PortfolioExchange[],
+  type?: PortfolioExchange["type"],
 ): string[] {
-  return Array.from(
-    new Set(
-      [
-        ...positions.map((position) => position.exchange ?? ""),
-        ...cashBalances.map((cashBalance) => cashBalance.platform),
-      ]
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
-  ).sort((left, right) => left.localeCompare(right));
+  return exchanges
+    .filter((exchange) => !type || exchange.type === type)
+    .map((exchange) => exchange.name)
+    .sort((left, right) => left.localeCompare(right));
 }

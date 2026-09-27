@@ -20,13 +20,14 @@ Real portfolio records should support:
 
 Portfolio-level data should include:
 
+- user-defined exchanges/platforms with a name and supported operation type
 - cash balance
 - base currency
 - sector exposure
 - geographic exposure
 - currency exposure
 
-Position storage keeps one aggregated position per portfolio asset for allocation and P&L, plus platform-level holding rows for the exchange/brokerage breakdown of that aggregated position.
+Position storage keeps one aggregated position per portfolio asset for allocation and P&L, plus platform-level holding rows for the exchange/brokerage breakdown of that aggregated position. Portfolio operations choose only from user-defined exchanges/platforms, grouped as crypto or stock exchanges for MVP.
 
 ## Watchlist
 

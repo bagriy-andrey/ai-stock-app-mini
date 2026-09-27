@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SUPPORTED_PORTFOLIO_CURRENCIES } from "@/lib/portfolio/currencies";
 
@@ -31,7 +31,6 @@ export function CashFormModal({
   showTrigger?: boolean;
 }) {
   const router = useRouter();
-  const exchangeListId = useId();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -129,21 +128,26 @@ export function CashFormModal({
                   : "Editing replaces this cash balance amount."}
               </p>
               <Field label="Exchange">
-                <input
-                  autoComplete="off"
+                <select
                   className={inputClassName}
                   defaultValue={cashBalance?.platform ?? ""}
-                  list={exchangeOptions.length > 0 ? exchangeListId : undefined}
+                  disabled={exchangeOptions.length === 0}
                   name="platform"
-                  placeholder="Revolut, IBKR, Binance..."
                   required
-                />
-                {exchangeOptions.length > 0 ? (
-                  <datalist id={exchangeListId}>
-                    {exchangeOptions.map((option) => (
-                      <option key={option} value={option} />
-                    ))}
-                  </datalist>
+                >
+                  <option disabled value="">
+                    Select exchange
+                  </option>
+                  {exchangeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                {exchangeOptions.length === 0 ? (
+                  <span className="text-xs font-normal text-amber-700">
+                    Add an exchange before adding cash.
+                  </span>
                 ) : null}
               </Field>
               <div className="grid grid-cols-2 gap-3">
@@ -184,7 +188,7 @@ export function CashFormModal({
                 </button>
                 <button
                   className={primaryButtonClassName}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || exchangeOptions.length === 0}
                   type="submit"
                 >
                   {isSubmitting ? "Saving..." : "Save cash"}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { AssetType } from "@prisma/client";
 import {
   SUPPORTED_PORTFOLIO_CURRENCIES,
@@ -44,7 +44,6 @@ export function AssetSearchFields({
   onAssetCurrencyResolved?: (currency: string, isLocked: boolean) => void;
   onExchangeChange?: (exchange: string) => void;
 }) {
-  const exchangeListId = useId();
   const [assetType, setAssetType] = useState<AssetType>(
     lockedAssetType ?? defaultAssetType,
   );
@@ -143,8 +142,10 @@ export function AssetSearchFields({
     setName(result.name);
     setAssetCurrency(nextCurrency);
     setIsAssetCurrencyLocked(shouldLockCurrency);
-    setExchange(result.exchange ?? "");
-    onExchangeChange?.(result.exchange ?? "");
+    if (result.exchange && exchangeOptions.includes(result.exchange)) {
+      setExchange(result.exchange);
+      onExchangeChange?.(result.exchange);
+    }
     setProvider(result.provider);
     setProviderSymbol(result.providerSymbol);
     setResults([]);
@@ -270,10 +271,9 @@ export function AssetSearchFields({
           </select>
         </Field>
         <Field label="Exchange">
-          <input
-            autoComplete="off"
+          <select
             className={inputClassName}
-            list={exchangeOptions.length > 0 ? exchangeListId : undefined}
+            disabled={exchangeOptions.length === 0}
             name="exchange"
             onChange={(event) => {
               setExchange(event.target.value);
@@ -281,13 +281,20 @@ export function AssetSearchFields({
             }}
             required
             value={exchange}
-          />
-          {exchangeOptions.length > 0 ? (
-            <datalist id={exchangeListId}>
-              {exchangeOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+          >
+            <option disabled value="">
+              Select exchange
+            </option>
+            {exchangeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          {exchangeOptions.length === 0 ? (
+            <span className="text-xs font-normal text-amber-700">
+              Add an exchange before adding an asset.
+            </span>
           ) : null}
         </Field>
       </div>

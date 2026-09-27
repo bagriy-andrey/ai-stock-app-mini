@@ -13,6 +13,7 @@ import type {
   PositionPlatformHolding,
   PortfolioActivityLog,
   PortfolioActivityType,
+  PortfolioExchange,
 } from "@prisma/client";
 
 const DEFAULT_PORTFOLIO_NAME = "Real Portfolio";
@@ -25,6 +26,7 @@ export type PortfolioSummary = {
   baseCurrency: string;
   positions: PortfolioPositionSummary[];
   cashBalances: CashBalanceSummary[];
+  exchanges: PortfolioExchangeSummary[];
   activityLogs: PortfolioActivityLogSummary[];
   valuation: PortfolioValuation;
 };
@@ -58,6 +60,12 @@ export type CashBalanceSummary = {
   platform: string;
   currency: string;
   amount: number;
+};
+
+export type PortfolioExchangeSummary = {
+  id: string;
+  name: string;
+  type: "CRYPTO" | "STOCK";
 };
 
 export type PositionPlatformHoldingSummary = {
@@ -133,11 +141,22 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
           platform: "asc",
         },
       },
+      exchanges: {
+        orderBy: [
+          {
+            type: "asc",
+          },
+          {
+            name: "asc",
+          },
+        ],
+      },
     },
   });
 
   const positions = portfolioWithData.positions.map(toPositionSummary);
   const cashBalances = portfolioWithData.cashBalances.map(toCashBalanceSummary);
+  const exchanges = portfolioWithData.exchanges.map(toPortfolioExchangeSummary);
   const activityLogs = await getPortfolioActivityLogs(portfolioWithData.id);
   const fxRates = await getLatestPortfolioFxRates(
     portfolioWithData.baseCurrency,
@@ -161,6 +180,7 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
     baseCurrency: portfolioWithData.baseCurrency,
     positions,
     cashBalances,
+    exchanges,
     activityLogs,
     valuation,
   };
@@ -266,6 +286,16 @@ function toCashBalanceSummary(cashBalance: CashBalance): CashBalanceSummary {
     platform: cashBalance.platform,
     currency: cashBalance.currency,
     amount: cashBalance.amount.toNumber(),
+  };
+}
+
+function toPortfolioExchangeSummary(
+  exchange: PortfolioExchange,
+): PortfolioExchangeSummary {
+  return {
+    id: exchange.id,
+    name: exchange.name,
+    type: exchange.type,
   };
 }
 

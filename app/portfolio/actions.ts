@@ -18,6 +18,7 @@ import {
   cashBalanceFormSchema,
   cashWithdrawalFormSchema,
   portfolioBaseCurrencyFormSchema,
+  portfolioExchangeFormSchema,
   positionDeleteFormSchema,
   positionFormSchema,
   positionUpdateFormSchema,
@@ -34,6 +35,12 @@ export async function createPosition(formData: FormData) {
   });
 
   await prisma.$transaction(async (tx) => {
+    await assertPortfolioExchangeExists(tx, {
+      portfolioId: portfolio.id,
+      name: input.exchange,
+      type: getExchangeTypeForAsset(input.assetType),
+    });
+
     const cashBalance = await tx.cashBalance.findUnique({
       where: {
         portfolioId_platform_currency: {
@@ -176,6 +183,14 @@ export async function createPosition(formData: FormData) {
 
 export async function updatePosition(formData: FormData) {
   const input = positionUpdateFormSchema.parse(Object.fromEntries(formData));
+  const portfolio = await getOrCreateDefaultPortfolio();
+
+  await assertPortfolioExchangeExists(prisma, {
+    portfolioId: portfolio.id,
+    name: input.exchange,
+    type: getExchangeTypeForAsset(input.assetType),
+  });
+
   const asset = await upsertManualAsset({
     symbol: input.symbol,
     name: input.name,
@@ -239,6 +254,11 @@ export async function deletePosition(formData: FormData) {
 export async function upsertCashBalance(formData: FormData) {
   const input = cashBalanceFormSchema.parse(Object.fromEntries(formData));
   const portfolio = await getOrCreateDefaultPortfolio();
+
+  await assertPortfolioExchangeExists(prisma, {
+    portfolioId: portfolio.id,
+    name: input.platform,
+  });
 
   if (input.cashBalanceId) {
     await prisma.cashBalance.update({
@@ -392,6 +412,30 @@ export async function updateBaseCurrency(formData: FormData) {
   revalidatePath(PORTFOLIO_PATH);
 }
 
+export async function createPortfolioExchange(formData: FormData) {
+  const input = portfolioExchangeFormSchema.parse(Object.fromEntries(formData));
+  const portfolio = await getOrCreateDefaultPortfolio();
+
+  await prisma.portfolioExchange.upsert({
+    where: {
+      portfolioId_name: {
+        portfolioId: portfolio.id,
+        name: input.name,
+      },
+    },
+    create: {
+      portfolioId: portfolio.id,
+      name: input.name,
+      type: input.type,
+    },
+    update: {
+      type: input.type,
+    },
+  });
+
+  revalidatePath(PORTFOLIO_PATH);
+}
+
 async function createPortfolioActivityLog(
   tx: Prisma.TransactionClient,
   input: {
@@ -511,4 +555,33 @@ function getErrorMessage(error: unknown): string {
   }
 
   return "Unknown error";
+}
+
+function getExchangeTypeForAsset(assetType: string): "CRYPTO" | "STOCK" {
+  return assetType === "CRYPTO" ? "CRYPTO" : "STOCK";
+}
+
+async function assertPortfolioExchangeExists(
+  db: Prisma.TransactionClient | typeof prisma,
+  input: {
+    portfolioId: string;
+    name: string;
+    type?: "CRYPTO" | "STOCK";
+  },
+) {
+  const exchange = await db.portfolioExchange.findFirst({
+    where: {
+      portfolioId: input.portfolioId,
+      name: input.name,
+      ...(input.type ? { type: input.type } : {}),
+    },
+  });
+
+  if (!exchange) {
+    throw new Error(
+      input.type
+        ? `Add ${input.name} as a ${input.type.toLowerCase()} exchange before using it.`
+        : `Add ${input.name} as an exchange before using it.`,
+    );
+  }
 }

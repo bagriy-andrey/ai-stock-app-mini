@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   cashBalanceFormSchema,
   cashWithdrawalFormSchema,
+  portfolioExchangeFormSchema,
   positionFormSchema,
 } from "@/lib/portfolio/validation";
 
@@ -143,6 +144,32 @@ describe("portfolio form validation", () => {
         platform: "Binance",
         currency: "USD",
         amount: "0",
+      }),
+    ).toThrow();
+  });
+
+  it("validates portfolio exchanges", () => {
+    expect(
+      portfolioExchangeFormSchema.parse({
+        name: " Binance ",
+        type: "CRYPTO",
+      }),
+    ).toEqual({
+      name: "Binance",
+      type: "CRYPTO",
+    });
+
+    expect(() =>
+      portfolioExchangeFormSchema.parse({
+        name: "",
+        type: "CRYPTO",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      portfolioExchangeFormSchema.parse({
+        name: "IBKR",
+        type: "BROKER",
       }),
     ).toThrow();
   });
