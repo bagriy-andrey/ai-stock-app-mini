@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AiCallStatus {
+  SUCCESS
+  ERROR
+}
+
+model AiUsageRecord {
+  id           String       @id @default(cuid())
+  agent        String
+  ticker       String?
+  model        String
+  modelTier    String
+  inputTokens  Int?
+  outputTokens Int?
+  cost         Decimal?     @db.Decimal(12, 6)
+  latencyMs    Int?
+  status       AiCallStatus
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+
+  @@index([agent])
+  @@index([model])
+  @@index([modelTier])
+  @@index([createdAt])
+}
