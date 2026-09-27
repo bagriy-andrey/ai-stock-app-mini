@@ -254,7 +254,9 @@ function PositionsTable({
                 <th className="px-4 py-3 font-semibold">Intent</th>
                 <th className="px-4 py-3 font-semibold">Operation</th>
                 <th className="px-4 py-3 font-semibold">Notes</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
+                <th className="w-12 px-4 py-3 font-semibold">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200">
@@ -265,7 +267,7 @@ function PositionsTable({
 
                 return (
                   <tr
-                    className="cursor-pointer hover:bg-zinc-50"
+                    className="group cursor-pointer hover:bg-zinc-50"
                     key={position.id}
                     onClick={() => setSelectedPosition(position)}
                   >
@@ -530,12 +532,14 @@ function CashTable({
                 <th className="px-4 py-3 font-semibold">Exchange</th>
                 <th className="px-4 py-3 font-semibold">Currency</th>
                 <th className="px-4 py-3 font-semibold">Amount</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
+                <th className="w-12 px-4 py-3 font-semibold">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200">
               {cashBalances.map((cashBalance) => (
-                <tr key={cashBalance.id}>
+                <tr className="group hover:bg-zinc-50" key={cashBalance.id}>
                   <td className="px-4 py-3 font-medium">
                     {cashBalance.platform}
                   </td>

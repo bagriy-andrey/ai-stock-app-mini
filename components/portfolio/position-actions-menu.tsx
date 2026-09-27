@@ -46,6 +46,8 @@ export function PositionActionsMenu({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
     right: number;
     top: number;
@@ -106,12 +108,15 @@ export function PositionActionsMenu({
     <div className="inline-flex">
       <button
         aria-label="Position actions"
-        className="h-8 w-8 rounded border border-zinc-300 text-lg leading-none text-zinc-700 hover:bg-zinc-100"
+        className={`grid size-8 place-items-center rounded border border-zinc-300 text-zinc-700 transition hover:bg-zinc-100 focus:opacity-100 group-hover:opacity-100 ${
+          isOpen ? "opacity-100" : "opacity-0"
+        }`}
         onClick={() => setIsOpen((current) => !current)}
         ref={buttonRef}
+        title="Edit"
         type="button"
       >
-        ...
+        <PencilIcon />
       </button>
       {isOpen && menuPosition
         ? createPortal(
@@ -123,26 +128,70 @@ export function PositionActionsMenu({
             top: menuPosition.top,
           }}
         >
-          <PositionFormModal
-            action={updateAction}
-            assetType={position.assetType}
-            baseCurrency={baseCurrency}
-            cashBalances={cashBalances}
-            exchangeOptions={exchangeOptions}
-            mode="edit"
-            position={position}
-          />
-          <ConfirmDeleteButton
-            action={deleteAction}
-            description={`Delete ${position.symbol} from this portfolio? This cannot be undone.`}
-            hiddenName="positionId"
-            hiddenValue={position.id}
-            title="Delete position"
-          />
+          <button
+            className="h-9 w-full rounded px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            onClick={() => {
+              setIsEditOpen(true);
+              setIsOpen(false);
+            }}
+            type="button"
+          >
+            Edit
+          </button>
+          <button
+            className="h-9 w-full rounded px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
+            onClick={() => {
+              setIsDeleteOpen(true);
+              setIsOpen(false);
+            }}
+            type="button"
+          >
+            Delete
+          </button>
         </div>,
         document.body,
       )
         : null}
+      <PositionFormModal
+        action={updateAction}
+        assetType={position.assetType}
+        baseCurrency={baseCurrency}
+        cashBalances={cashBalances}
+        exchangeOptions={exchangeOptions}
+        isOpen={isEditOpen}
+        mode="edit"
+        onOpenChange={setIsEditOpen}
+        position={position}
+        showTrigger={false}
+      />
+      <ConfirmDeleteButton
+        action={deleteAction}
+        description={`Delete ${position.symbol} from this portfolio? This cannot be undone.`}
+        hiddenName="positionId"
+        hiddenValue={position.id}
+        isOpen={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        showTrigger={false}
+        title="Delete position"
+      />
     </div>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
   );
 }

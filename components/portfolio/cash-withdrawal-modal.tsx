@@ -14,13 +14,19 @@ export function CashWithdrawalModal({
   cashBalances,
   defaultCashBalance,
   action,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  showTrigger = true,
 }: {
   cashBalances: CashBalance[];
   defaultCashBalance: CashBalance;
   action: (formData: FormData) => Promise<void>;
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  showTrigger?: boolean;
 }) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCashBalanceId, setSelectedCashBalanceId] = useState(
     defaultCashBalance.id,
@@ -30,6 +36,7 @@ export function CashWithdrawalModal({
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const isOpen = controlledIsOpen ?? internalIsOpen;
   const selectedCashBalance = useMemo(
     () =>
       cashBalances.find((cashBalance) => cashBalance.id === selectedCashBalanceId) ??
@@ -58,7 +65,7 @@ export function CashWithdrawalModal({
       await action(formData);
       form.reset();
       setAmount(0);
-      setIsOpen(false);
+      setOpen(false);
       setToast({
         message: "Cash withdrawn successfully.",
         type: "success",
@@ -76,19 +83,29 @@ export function CashWithdrawalModal({
     }
   }
 
+  function setOpen(nextIsOpen: boolean) {
+    if (controlledIsOpen === undefined) {
+      setInternalIsOpen(nextIsOpen);
+    }
+
+    onOpenChange?.(nextIsOpen);
+  }
+
   return (
     <>
-      <button
-        className={menuButtonClassName}
-        onClick={() => {
-          setSelectedCashBalanceId(defaultCashBalance.id);
-          setAmount(0);
-          setIsOpen(true);
-        }}
-        type="button"
-      >
-        Withdraw
-      </button>
+      {showTrigger ? (
+        <button
+          className={menuButtonClassName}
+          onClick={() => {
+            setSelectedCashBalanceId(defaultCashBalance.id);
+            setAmount(0);
+            setOpen(true);
+          }}
+          type="button"
+        >
+          Withdraw
+        </button>
+      ) : null}
 
       {toast && <Toast message={toast.message} type={toast.type} />}
 
@@ -99,7 +116,7 @@ export function CashWithdrawalModal({
               <h2 className="text-base font-semibold">Withdraw cash</h2>
               <button
                 className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setOpen(false)}
                 type="button"
               >
                 Close
@@ -170,7 +187,7 @@ export function CashWithdrawalModal({
                 <button
                   className={secondaryButtonClassName}
                   disabled={isSubmitting}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setOpen(false)}
                   type="button"
                 >
                   Cancel

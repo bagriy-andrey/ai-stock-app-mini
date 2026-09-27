@@ -40,6 +40,9 @@ export function PositionFormModal({
   assetType,
   cashBalances = [],
   exchangeOptions = [],
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  showTrigger = true,
 }: {
   mode: "create" | "edit";
   baseCurrency: string;
@@ -48,9 +51,12 @@ export function PositionFormModal({
   assetType?: AssetType;
   cashBalances?: CashBalance[];
   exchangeOptions?: string[];
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  showTrigger?: boolean;
 }) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [costCurrency, setCostCurrency] = useState(
@@ -69,6 +75,7 @@ export function PositionFormModal({
     type: "success" | "error";
   } | null>(null);
   const title = mode === "create" ? "Add position" : "Edit position";
+  const isOpen = controlledIsOpen ?? internalIsOpen;
   const purchaseCost = quantity * averageCost;
   const selectedCashBalance = cashBalances.find(
     (cashBalance) =>
@@ -109,7 +116,7 @@ export function PositionFormModal({
         setIsCostCurrencyLocked(false);
       }
 
-      setIsOpen(false);
+      setOpen(false);
       setToast({
         message:
           mode === "create"
@@ -130,25 +137,35 @@ export function PositionFormModal({
     }
   }
 
+  function setOpen(nextIsOpen: boolean) {
+    if (controlledIsOpen === undefined) {
+      setInternalIsOpen(nextIsOpen);
+    }
+
+    onOpenChange?.(nextIsOpen);
+  }
+
   return (
     <>
-      <button
-        className={mode === "create" ? primaryButtonClassName : secondaryButtonClassName}
-        onClick={() => {
-          if (mode === "create") {
-            setCostCurrency(baseCurrency);
-            setSelectedExchange("");
-            setQuantity(0);
-            setAverageCost(0);
-            setIsCostCurrencyLocked(false);
-          }
+      {showTrigger ? (
+        <button
+          className={mode === "create" ? primaryButtonClassName : secondaryButtonClassName}
+          onClick={() => {
+            if (mode === "create") {
+              setCostCurrency(baseCurrency);
+              setSelectedExchange("");
+              setQuantity(0);
+              setAverageCost(0);
+              setIsCostCurrencyLocked(false);
+            }
 
-          setIsOpen(true);
-        }}
-        type="button"
-      >
-        {mode === "create" ? "Add Position" : "Edit"}
-      </button>
+            setOpen(true);
+          }}
+          type="button"
+        >
+          {mode === "create" ? "Add Position" : "Edit"}
+        </button>
+      ) : null}
 
       {toast && <Toast message={toast.message} type={toast.type} />}
 
@@ -159,7 +176,7 @@ export function PositionFormModal({
               <h2 className="text-base font-semibold">{title}</h2>
               <button
                 className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setOpen(false)}
                 type="button"
               >
                 Close
@@ -288,7 +305,7 @@ export function PositionFormModal({
                 <button
                   className={secondaryButtonClassName}
                   disabled={isSubmitting}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setOpen(false)}
                   type="button"
                 >
                   Cancel

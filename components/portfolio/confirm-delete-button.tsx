@@ -8,24 +8,41 @@ export function ConfirmDeleteButton({
   hiddenValue,
   title,
   description,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  showTrigger = true,
 }: {
   action: (formData: FormData) => Promise<void>;
   hiddenName: string;
   hiddenValue: string;
   title: string;
   description: string;
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  showTrigger?: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen ?? internalIsOpen;
+
+  function setOpen(nextIsOpen: boolean) {
+    if (controlledIsOpen === undefined) {
+      setInternalIsOpen(nextIsOpen);
+    }
+
+    onOpenChange?.(nextIsOpen);
+  }
 
   return (
     <>
-      <button
-        className="h-9 w-full rounded px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
-        onClick={() => setIsOpen(true)}
-        type="button"
-      >
-        Delete
-      </button>
+      {showTrigger ? (
+        <button
+          className="h-9 w-full rounded px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          Delete
+        </button>
+      ) : null}
       {isOpen && (
         <div className="fixed inset-0 z-[70] grid place-items-center bg-zinc-950/40 px-4 py-6">
           <div className="w-full max-w-md rounded border border-zinc-200 bg-white shadow-xl">
@@ -39,7 +56,7 @@ export function ConfirmDeleteButton({
               <input name={hiddenName} type="hidden" value={hiddenValue} />
               <button
                 className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setOpen(false)}
                 type="button"
               >
                 Cancel

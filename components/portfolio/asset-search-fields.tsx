@@ -60,9 +60,13 @@ export function AssetSearchFields({
     defaultProviderSymbol || defaultSymbol,
   );
   const [results, setResults] = useState<AssetSearchResult[]>([]);
+  const [hasSymbolInteraction, setHasSymbolInteraction] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const canSearch = useMemo(() => symbol.trim().length >= 2, [symbol]);
+  const canSearch = useMemo(
+    () => hasSymbolInteraction && symbol.trim().length >= 2,
+    [hasSymbolInteraction, symbol],
+  );
 
   useEffect(() => {
     if (!canSearch) {
@@ -119,6 +123,7 @@ export function AssetSearchFields({
     setProvider("manual");
     setProviderSymbol("");
     setResults([]);
+    setHasSymbolInteraction(false);
     setIsAssetCurrencyLocked(false);
     onAssetCurrencyResolved?.(assetCurrency, false);
 
@@ -143,6 +148,7 @@ export function AssetSearchFields({
     setProvider(result.provider);
     setProviderSymbol(result.providerSymbol);
     setResults([]);
+    setHasSymbolInteraction(false);
     onAssetCurrencyResolved?.(nextCurrency, shouldLockCurrency);
   }
 
@@ -188,6 +194,7 @@ export function AssetSearchFields({
               onChange={(event) => {
                 const value = event.target.value.toUpperCase();
                 setSymbol(value);
+                setHasSymbolInteraction(true);
                 setProvider("manual");
                 setProviderSymbol(value);
                 setIsAssetCurrencyLocked(false);

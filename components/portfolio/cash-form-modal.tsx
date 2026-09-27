@@ -17,16 +17,22 @@ export function CashFormModal({
   cashBalance,
   action,
   exchangeOptions = [],
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  showTrigger = true,
 }: {
   mode: "create" | "edit";
   baseCurrency: string;
   cashBalance?: CashValue;
   action: (formData: FormData) => Promise<void>;
   exchangeOptions?: string[];
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  showTrigger?: boolean;
 }) {
   const router = useRouter();
   const exchangeListId = useId();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [toast, setToast] = useState<{
@@ -34,6 +40,7 @@ export function CashFormModal({
     type: "success" | "error";
   } | null>(null);
   const title = mode === "create" ? "Add cash" : "Edit cash";
+  const isOpen = controlledIsOpen ?? internalIsOpen;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,7 +55,7 @@ export function CashFormModal({
         form.reset();
         setFormKey((current) => current + 1);
       }
-      setIsOpen(false);
+      setOpen(false);
       setToast({
         message:
           mode === "create"
@@ -69,15 +76,25 @@ export function CashFormModal({
     }
   }
 
+  function setOpen(nextIsOpen: boolean) {
+    if (controlledIsOpen === undefined) {
+      setInternalIsOpen(nextIsOpen);
+    }
+
+    onOpenChange?.(nextIsOpen);
+  }
+
   return (
     <>
-      <button
-        className={mode === "create" ? primaryButtonClassName : menuButtonClassName}
-        onClick={() => setIsOpen(true)}
-        type="button"
-      >
-        {mode === "create" ? "Add Cash" : "Edit"}
-      </button>
+      {showTrigger ? (
+        <button
+          className={mode === "create" ? primaryButtonClassName : menuButtonClassName}
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          {mode === "create" ? "Add Cash" : "Edit"}
+        </button>
+      ) : null}
 
       {toast && <Toast message={toast.message} type={toast.type} />}
 
@@ -88,7 +105,7 @@ export function CashFormModal({
               <h2 className="text-base font-semibold">{title}</h2>
               <button
                 className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setOpen(false)}
                 type="button"
               >
                 Close
@@ -160,7 +177,7 @@ export function CashFormModal({
                 <button
                   className={secondaryButtonClassName}
                   disabled={isSubmitting}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setOpen(false)}
                   type="button"
                 >
                   Cancel
