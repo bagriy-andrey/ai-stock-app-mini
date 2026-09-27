@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import type {
   AssetType,
@@ -83,6 +83,7 @@ type PortfolioActivityLog = {
 };
 
 type ActiveTab = "CRYPTO" | "STOCK" | "CASH" | "CHARTS" | "ACTIVITY";
+type ChartsTab = "PORTFOLIO_CHARTS" | "EXCHANGE_ALLOCATION";
 
 const tabs: Array<{ id: ActiveTab; label: string }> = [
   { id: "CRYPTO", label: "Crypto" },
@@ -91,6 +92,54 @@ const tabs: Array<{ id: ActiveTab; label: string }> = [
   { id: "CHARTS", label: "Charts" },
   { id: "ACTIVITY", label: "Activity" },
 ];
+
+const chartsTabs: Array<{ id: ChartsTab; label: string }> = [
+  { id: "PORTFOLIO_CHARTS", label: "Portfolio charts" },
+  { id: "EXCHANGE_ALLOCATION", label: "Exchange allocation" },
+];
+
+const portfolioActiveTabStorageKey = "portfolio.activeTab";
+const portfolioChartsTabStorageKey = "portfolio.charts.activeTab";
+
+function isActiveTab(value: string | null): value is ActiveTab {
+  return tabs.some((tab) => tab.id === value);
+}
+
+function isChartsTab(value: string | null): value is ChartsTab {
+  return chartsTabs.some((tab) => tab.id === value);
+}
+
+function useStoredTab<TTab extends string>(
+  storageKey: string,
+  fallbackTab: TTab,
+  isValidTab: (value: string | null) => value is TTab,
+): [TTab | null, (tab: TTab) => void] {
+  const changeEventName = `${storageKey}:change`;
+  const activeTab = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("storage", onStoreChange);
+      window.addEventListener(changeEventName, onStoreChange);
+
+      return () => {
+        window.removeEventListener("storage", onStoreChange);
+        window.removeEventListener(changeEventName, onStoreChange);
+      };
+    },
+    () => {
+      const savedTab = window.localStorage.getItem(storageKey);
+
+      return isValidTab(savedTab) ? savedTab : fallbackTab;
+    },
+    () => null,
+  );
+
+  function selectTab(tab: TTab) {
+    window.localStorage.setItem(storageKey, tab);
+    window.dispatchEvent(new Event(changeEventName));
+  }
+
+  return [activeTab, selectTab];
+}
 
 export function PortfolioTablesTabs({
   positions,
@@ -125,7 +174,11 @@ export function PortfolioTablesTabs({
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteActivityLogAction: (formData: FormData) => Promise<void>;
 }) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("CRYPTO");
+  const [activeTab, selectActiveTab] = useStoredTab(
+    portfolioActiveTabStorageKey,
+    "CRYPTO",
+    isActiveTab,
+  );
   const [chartSelectedPosition, setChartSelectedPosition] =
     useState<PortfolioPosition | null>(null);
   const [chartPositionToSell, setChartPositionToSell] =
@@ -135,6 +188,10 @@ export function PortfolioTablesTabs({
   const cryptoExchangeOptions = getExchangeOptions(exchanges, "CRYPTO");
   const stockExchangeOptions = getExchangeOptions(exchanges, "STOCK");
   const cashExchangeOptions = getExchangeOptions(exchanges);
+
+  if (activeTab === null) {
+    return <PortfolioTabsLoadingState />;
+  }
 
   function openChartSellModal(position: PortfolioPosition) {
     setChartSelectedPosition(null);
@@ -157,7 +214,7 @@ export function PortfolioTablesTabs({
                 : "border-transparent text-zinc-500 hover:text-zinc-950"
             } ${tab.id === "CHARTS" ? "ml-auto" : ""}`}
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => selectActiveTab(tab.id)}
             type="button"
           >
             {tab.label}
@@ -295,6 +352,34 @@ export function PortfolioTablesTabs({
           showTrigger={false}
         />
       ) : null}
+    </section>
+  );
+}
+
+function PortfolioTabsLoadingState() {
+  return (
+    <section className="grid gap-4" aria-label="Loading portfolio tabs">
+      <div className="flex flex-wrap gap-2 border-b border-zinc-200">
+        {tabs.map((tab) => (
+          <div
+            className={`h-[46px] w-20 animate-pulse border-b-2 border-transparent bg-zinc-100 ${
+              tab.id === "CHARTS" ? "ml-auto" : ""
+            }`}
+            key={tab.id}
+          />
+        ))}
+      </div>
+      <div className="rounded border border-zinc-200 bg-white">
+        <div className="border-b border-zinc-200 px-4 py-3">
+          <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+          <div className="mt-2 h-3 w-48 animate-pulse rounded bg-zinc-100" />
+        </div>
+        <div className="grid gap-3 p-4">
+          <div className="h-10 animate-pulse rounded bg-zinc-100" />
+          <div className="h-10 animate-pulse rounded bg-zinc-100" />
+          <div className="h-10 animate-pulse rounded bg-zinc-100" />
+        </div>
+      </div>
     </section>
   );
 }
@@ -1534,6 +1619,16 @@ function PortfolioChartsWidget({
   baseCurrency: string;
   onPositionSelect: (position: PortfolioPosition) => void;
 }) {
+  const [activeChartsTab, selectChartsTab] = useStoredTab(
+    portfolioChartsTabStorageKey,
+    "PORTFOLIO_CHARTS",
+    isChartsTab,
+  );
+
+  if (activeChartsTab === null) {
+    return <PortfolioChartsLoadingState />;
+  }
+
   const positionValueById = new Map(
     valuationPositions.map((valuation) => [
       valuation.id,
@@ -1572,138 +1667,186 @@ function PortfolioChartsWidget({
 
   return (
     <section className="grid gap-4">
-      <div className="rounded border border-zinc-200 bg-white">
-        <div className="border-b border-zinc-200 px-4 py-3">
-          <h2 className="text-sm font-semibold uppercase text-zinc-500">
-            Portfolio Charts
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            Allocation pies use available base-currency valuations.
-          </p>
-        </div>
-        <div className="grid auto-rows-fr gap-4 p-4 lg:grid-cols-3">
-          <PortfolioPieCard
-            baseCurrency={baseCurrency}
-            centerLabel="Total"
-            emptyText="No valued assets or cash to chart."
-            slices={getPortfolioChartSlices([
-              {
-                detail: `${positions.filter((position) => position.assetType === "CRYPTO").length} positions`,
-                label: "Crypto",
-                value: cryptoValue,
-              },
-              {
-                detail: `${positions.filter((position) => position.assetType === "STOCK" || position.assetType === "ETF").length} positions`,
-                label: "Stocks & ETF",
-                value: stockValue,
-              },
-              {
-                detail: `${cashBalances.length} balances`,
-                label: "Free cash",
-                value: cashValue,
-              },
-            ])}
-            title="All assets"
-          />
-          <PortfolioPieCard
-            baseCurrency={baseCurrency}
-            centerLabel="Stocks"
-            emptyText="No valued stock or ETF positions to chart."
-            onSliceSelect={(slice) => {
-              const position = positions.find(
-                (item) => item.id === slice.positionId,
-              );
-
-              if (position) {
-                onPositionSelect(position);
-              }
-            }}
-            slices={getPortfolioChartSlices(
-              positions
-                .filter(
-                  (position) =>
-                    position.assetType === "STOCK" ||
-                    position.assetType === "ETF",
-                )
-                .map((position) => ({
-                  label: position.symbol,
-                  positionId: position.id,
-                  value: positionValueById.get(position.id) ?? 0,
-                })),
-            )}
-            title="Stocks & ETF"
-          />
-          <PortfolioPieCard
-            baseCurrency={baseCurrency}
-            centerLabel="Crypto"
-            emptyText="No valued crypto positions to chart."
-            onSliceSelect={(slice) => {
-              const position = positions.find(
-                (item) => item.id === slice.positionId,
-              );
-
-              if (position) {
-                onPositionSelect(position);
-              }
-            }}
-            slices={getPortfolioChartSlices(
-              positions
-                .filter((position) => position.assetType === "CRYPTO")
-                .map((position) => ({
-                  label: position.symbol,
-                  positionId: position.id,
-                  value: positionValueById.get(position.id) ?? 0,
-                })),
-            )}
-            title="Crypto"
-          />
-        </div>
+      <div className="flex flex-wrap gap-2 border-b border-zinc-200">
+        {chartsTabs.map((tab) => (
+          <button
+            className={`border-b-2 px-4 py-3 text-sm font-medium ${
+              activeChartsTab === tab.id
+                ? "border-zinc-950 text-zinc-950"
+                : "border-transparent text-zinc-500 hover:text-zinc-950"
+            }`}
+            key={tab.id}
+            onClick={() => selectChartsTab(tab.id)}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
+      {activeChartsTab === "PORTFOLIO_CHARTS" ? (
+        <div className="rounded border border-zinc-200 bg-white">
+          <div className="border-b border-zinc-200 px-4 py-3">
+            <h2 className="text-sm font-semibold uppercase text-zinc-500">
+              Portfolio Charts
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Allocation pies use available base-currency valuations.
+            </p>
+          </div>
+          <div className="grid auto-rows-fr gap-4 p-4 lg:grid-cols-3">
+            <PortfolioPieCard
+              baseCurrency={baseCurrency}
+              centerLabel="Total"
+              emptyText="No valued assets or cash to chart."
+              slices={getPortfolioChartSlices([
+                {
+                  detail: `${positions.filter((position) => position.assetType === "CRYPTO").length} positions`,
+                  label: "Crypto",
+                  value: cryptoValue,
+                },
+                {
+                  detail: `${positions.filter((position) => position.assetType === "STOCK" || position.assetType === "ETF").length} positions`,
+                  label: "Stocks & ETF",
+                  value: stockValue,
+                },
+                {
+                  detail: `${cashBalances.length} balances`,
+                  label: "Free cash",
+                  value: cashValue,
+                },
+              ])}
+              title="All assets"
+            />
+            <PortfolioPieCard
+              baseCurrency={baseCurrency}
+              centerLabel="Stocks"
+              emptyText="No valued stock or ETF positions to chart."
+              onSliceSelect={(slice) => {
+                const position = positions.find(
+                  (item) => item.id === slice.positionId,
+                );
+
+                if (position) {
+                  onPositionSelect(position);
+                }
+              }}
+              slices={getPortfolioChartSlices(
+                positions
+                  .filter(
+                    (position) =>
+                      position.assetType === "STOCK" ||
+                      position.assetType === "ETF",
+                  )
+                  .map((position) => ({
+                    label: position.symbol,
+                    positionId: position.id,
+                    value: positionValueById.get(position.id) ?? 0,
+                  })),
+              )}
+              title="Stocks & ETF"
+            />
+            <PortfolioPieCard
+              baseCurrency={baseCurrency}
+              centerLabel="Crypto"
+              emptyText="No valued crypto positions to chart."
+              onSliceSelect={(slice) => {
+                const position = positions.find(
+                  (item) => item.id === slice.positionId,
+                );
+
+                if (position) {
+                  onPositionSelect(position);
+                }
+              }}
+              slices={getPortfolioChartSlices(
+                positions
+                  .filter((position) => position.assetType === "CRYPTO")
+                  .map((position) => ({
+                    label: position.symbol,
+                    positionId: position.id,
+                    value: positionValueById.get(position.id) ?? 0,
+                  })),
+              )}
+              title="Crypto"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {activeChartsTab === "EXCHANGE_ALLOCATION" ? (
+        <div className="rounded border border-zinc-200 bg-white">
+          <div className="border-b border-zinc-200 px-4 py-3">
+            <h2 className="text-sm font-semibold uppercase text-zinc-500">
+              Exchange allocation
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Each pie compares assets held on the platform with free cash
+              there.
+            </p>
+          </div>
+          {exchangeCharts.length === 0 ? (
+            <p className="px-4 py-8 text-sm text-zinc-600">
+              No exchange holdings or free cash to chart.
+            </p>
+          ) : (
+            <div className="grid auto-rows-fr gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+              {exchangeCharts.map((exchangeChart) => (
+                <PortfolioPieCard
+                  baseCurrency={baseCurrency}
+                  centerLabel={exchangeChart.type}
+                  emptyText="No valued assets or cash on this exchange."
+                  key={exchangeChart.platform}
+                  onSliceSelect={(slice) => {
+                    const position = positions.find(
+                      (item) => item.id === slice.positionId,
+                    );
+
+                    if (position) {
+                      onPositionSelect(position);
+                    }
+                  }}
+                  slices={getPortfolioChartSlices([
+                    ...exchangeChart.assetSlices,
+                    {
+                      detail: `${exchangeChart.cashBalanceCount} balances`,
+                      label: "Free cash",
+                      value: exchangeChart.cashValue,
+                    },
+                  ])}
+                  subtitle={`${exchangeChart.assetCount} assets / ${formatMoney(exchangeChart.cashValue, baseCurrency)} free cash`}
+                  title={exchangeChart.platform}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function PortfolioChartsLoadingState() {
+  return (
+    <section className="grid gap-4" aria-label="Loading portfolio charts">
+      <div className="flex flex-wrap gap-2 border-b border-zinc-200">
+        {chartsTabs.map((tab) => (
+          <div
+            className="h-[46px] w-36 animate-pulse border-b-2 border-transparent bg-zinc-100"
+            key={tab.id}
+          />
+        ))}
+      </div>
       <div className="rounded border border-zinc-200 bg-white">
         <div className="border-b border-zinc-200 px-4 py-3">
-          <h2 className="text-sm font-semibold uppercase text-zinc-500">
-            Exchange allocation
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            Each pie compares assets held on the platform with free cash there.
-          </p>
+          <div className="h-4 w-36 animate-pulse rounded bg-zinc-100" />
+          <div className="mt-2 h-3 w-64 animate-pulse rounded bg-zinc-100" />
         </div>
-        {exchangeCharts.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-zinc-600">
-            No exchange holdings or free cash to chart.
-          </p>
-        ) : (
-          <div className="grid auto-rows-fr gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
-            {exchangeCharts.map((exchangeChart) => (
-              <PortfolioPieCard
-                baseCurrency={baseCurrency}
-                centerLabel={exchangeChart.type}
-                emptyText="No valued assets or cash on this exchange."
-                key={exchangeChart.platform}
-                onSliceSelect={(slice) => {
-                  const position = positions.find(
-                    (item) => item.id === slice.positionId,
-                  );
-
-                  if (position) {
-                    onPositionSelect(position);
-                  }
-                }}
-                slices={getPortfolioChartSlices([
-                  ...exchangeChart.assetSlices,
-                  {
-                    detail: `${exchangeChart.cashBalanceCount} balances`,
-                    label: "Free cash",
-                    value: exchangeChart.cashValue,
-                  },
-                ])}
-                subtitle={`${exchangeChart.assetCount} assets / ${formatMoney(exchangeChart.cashValue, baseCurrency)} free cash`}
-                title={exchangeChart.platform}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid auto-rows-fr gap-4 p-4 lg:grid-cols-3">
+          <div className="h-[430px] animate-pulse rounded border border-zinc-200 bg-zinc-100" />
+          <div className="h-[430px] animate-pulse rounded border border-zinc-200 bg-zinc-100" />
+          <div className="h-[430px] animate-pulse rounded border border-zinc-200 bg-zinc-100" />
+        </div>
       </div>
     </section>
   );
