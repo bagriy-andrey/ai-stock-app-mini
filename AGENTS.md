@@ -31,3 +31,18 @@ Use staged work:
 4. Review
 
 Before implementing a feature, read the relevant files under `/docs`, especially the feature spec, architecture docs, roadmap, and decisions log. Update documentation when architectural decisions change. Update this file only when a durable project-wide instruction changes.
+
+## Development Insight Agent
+
+After every development chat that changes code, architecture, UI behavior, test strategy, or repo conventions, append concise reusable insights to `docs/development-insights.md`.
+
+Record insights that will make future work faster, such as:
+
+- which component, helper, route, repository, or Prisma model was used for a workflow
+- established UI behavior for similar screens, tables, cards, dialogs, and settings pages
+- backend patterns for server actions, repositories, model routing, persistence, validation, and migrations
+- testing or build findings that prevent repeated mistakes
+- integration caveats, sandbox/runtime constraints, and local development gotchas
+- relationships between features, docs, and architecture decisions
+
+Do not add generic diary entries. Prefer stable, actionable notes with file references. If the chat produced no reusable learning, add nothing.
