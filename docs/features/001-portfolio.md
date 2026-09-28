@@ -95,11 +95,13 @@ The user can see what they own, how the portfolio is allocated, whether concentr
 
 ## Open Questions
 
-- How should multi-currency cash balances be represented initially?
+None for Phase 1.
 
 Resolved for MVP: positions use one aggregated quantity and weighted average cost per asset. Tax lots and per-transaction history are deferred.
 
 Resolved for MVP: platform-level position holdings are stored as a breakdown under the aggregated position so the user can see how much of an asset is held on each exchange/platform without introducing full tax lots.
+
+Resolved for MVP: free cash is stored by platform and currency. Portfolio base currency is selectable between USD, EUR, and PLN, and supported balances and holdings are converted with Frankfurter for summary totals. If a required FX rate is unavailable, affected totals are marked incomplete.
 
 ## Future Extensions
 

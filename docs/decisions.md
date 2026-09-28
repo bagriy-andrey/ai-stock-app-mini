@@ -157,9 +157,9 @@ The portfolio keeps one aggregate position per portfolio asset for Phase 1 valua
 
 The MVP schema allows one watchlist item per asset. Watchlist groups and multiple strategy-specific watch entries are deferred.
 
-### Store multi-currency cash, but do not infer FX conversion
+### Store multi-currency cash and convert supported MVP currencies
 
-Cash balances are stored by currency from the start. Portfolio totals are complete only when values can be represented in the portfolio base currency. FX conversion belongs in later market-data work.
+Cash balances are stored by currency from the start. Portfolio totals are complete only when values can be represented in the portfolio base currency. Phase 1 supports USD, EUR, and PLN conversion through Frankfurter; if a required FX rate cannot be fetched, affected totals are marked incomplete.
 
 ### Keep MVP portfolio quantities and cash balances non-negative
 

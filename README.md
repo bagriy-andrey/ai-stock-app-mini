@@ -18,7 +18,7 @@ The project is primarily focused on long-term diversified investing. Tactical/sp
 
 ## Current Status
 
-Phase 0 foundation is implemented. Phase 1 portfolio workflows, Watchlist CRUD, and manual latest-price snapshots are implemented.
+Phase 0 foundation is implemented. Phase 1 portfolio, cash, watchlist, manual latest-price snapshots, MVP FX conversion, and stabilization checks are complete.
 
 ## Local Development
 

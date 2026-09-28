@@ -345,13 +345,13 @@ During implementation, update:
 
 Do not update `AGENTS.md` unless a durable project-wide instruction changes.
 
-## Open Questions To Resolve Before Implementation
+## Questions Resolved During Implementation
 
-- Should Phase 1 ship with manual price entry first, or a mock provider only?
-- Should the first real provider integration be deferred until after portfolio/watchlist CRUD?
-- Should positions allow multiple entries for the same asset with different intent, or should MVP enforce one active position per asset?
-- Should cash balances support negative values for margin or only non-negative cash?
-- Which base currency should the default portfolio use initially?
+- Phase 1 ships with manual latest-price snapshots first.
+- Real provider price ingestion is deferred until after portfolio/watchlist CRUD; provider search is used only as an asset metadata helper.
+- The MVP enforces one active position per portfolio and asset.
+- Cash balances and position quantities are non-negative.
+- The default portfolio uses USD initially, with USD, EUR, and PLN supported in the Phase 1 UI.
 
 ## Recommended Phase 1 Milestones
 
@@ -385,6 +385,8 @@ Do not update `AGENTS.md` unless a durable project-wide instruction changes.
 - Run lint, typecheck, tests, and build.
 - Review acceptance criteria.
 - Update documentation for decisions made during implementation.
+
+Phase 1E status: complete. `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` pass after documentation cleanup.
 
 ## Completion Criteria
 
