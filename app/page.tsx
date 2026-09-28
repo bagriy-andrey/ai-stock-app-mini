@@ -3,7 +3,7 @@ import { ExchangeRatesWidget } from "@/components/market-data/exchange-rates-wid
 
 const modules = [
   { href: "/portfolio", label: "Portfolio" },
-  { href: null, label: "Watchlist" },
+  { href: "/watchlist", label: "Watchlist" },
   { href: null, label: "Opportunities" },
   { href: null, label: "Predictions" },
   { href: null, label: "Reports" },

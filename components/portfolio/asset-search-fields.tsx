@@ -29,6 +29,8 @@ export function AssetSearchFields({
   defaultProviderSymbol = "",
   lockedAssetType,
   exchangeOptions = [],
+  isExchangeRequired = true,
+  allowManualExchange = false,
   onAssetCurrencyResolved,
   onExchangeChange,
   onAssetSelected,
@@ -42,6 +44,8 @@ export function AssetSearchFields({
   defaultProviderSymbol?: string;
   lockedAssetType?: AssetType;
   exchangeOptions?: string[];
+  isExchangeRequired?: boolean;
+  allowManualExchange?: boolean;
   onAssetCurrencyResolved?: (currency: string, isLocked: boolean) => void;
   onExchangeChange?: (exchange: string) => void;
   onAssetSelected?: (asset: AssetSearchResult) => void;
@@ -144,7 +148,10 @@ export function AssetSearchFields({
     setName(result.name);
     setAssetCurrency(nextCurrency);
     setIsAssetCurrencyLocked(shouldLockCurrency);
-    if (result.exchange && exchangeOptions.includes(result.exchange)) {
+    if (
+      result.exchange &&
+      (allowManualExchange || exchangeOptions.includes(result.exchange))
+    ) {
       setExchange(result.exchange);
       onExchangeChange?.(result.exchange);
     }
@@ -273,32 +280,47 @@ export function AssetSearchFields({
             ))}
           </select>
         </Field>
-        <Field label="Exchange">
-          <select
-            className={inputClassName}
-            disabled={exchangeOptions.length === 0}
-            name="exchange"
-            onChange={(event) => {
-              setExchange(event.target.value);
-              onExchangeChange?.(event.target.value);
-            }}
-            required
-            value={exchange}
-          >
-            <option disabled value="">
-              Select exchange
-            </option>
-            {exchangeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {exchangeOptions.length === 0 ? (
-            <span className="text-xs font-normal text-amber-700">
-              Add an exchange before adding an asset.
-            </span>
-          ) : null}
+        <Field label={isExchangeRequired ? "Exchange" : "Exchange (optional)"}>
+          {allowManualExchange ? (
+            <input
+              className={inputClassName}
+              name="exchange"
+              onChange={(event) => {
+                setExchange(event.target.value);
+                onExchangeChange?.(event.target.value);
+              }}
+              required={isExchangeRequired}
+              value={exchange}
+            />
+          ) : (
+            <>
+              <select
+                className={inputClassName}
+                disabled={exchangeOptions.length === 0}
+                name="exchange"
+                onChange={(event) => {
+                  setExchange(event.target.value);
+                  onExchangeChange?.(event.target.value);
+                }}
+                required={isExchangeRequired}
+                value={exchange}
+              >
+                <option disabled={isExchangeRequired} value="">
+                  {isExchangeRequired ? "Select exchange" : "No exchange"}
+                </option>
+                {exchangeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              {exchangeOptions.length === 0 && isExchangeRequired ? (
+                <span className="text-xs font-normal text-amber-700">
+                  Add an exchange before adding an asset.
+                </span>
+              ) : null}
+            </>
+          )}
         </Field>
       </div>
     </div>

@@ -13,8 +13,9 @@ import { PositionActionsMenu } from "@/components/portfolio/position-actions-men
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
 
-type PortfolioPosition = {
+export type PortfolioPosition = {
   id: string;
+  assetId: string;
   symbol: string;
   name: string;
   assetType: AssetType;
@@ -36,7 +37,7 @@ type PortfolioPosition = {
   } | null;
 };
 
-type PositionPlatformHolding = {
+export type PositionPlatformHolding = {
   id: string;
   platform: string;
   quantity: number;
@@ -72,7 +73,7 @@ type PortfolioExchange = {
   type: "CRYPTO" | "STOCK";
 };
 
-type PortfolioActivityLog = {
+export type PortfolioActivityLog = {
   id: string;
   type: PortfolioActivityType;
   platform: string | null;
@@ -586,18 +587,26 @@ function PositionsTable({
   );
 }
 
-function PositionPlatformHoldingsModal({
+export function PositionPlatformHoldingsModal({
   position,
   onClose,
   activityLogs,
   onBuy,
   onSell,
+  showTradeActions = true,
+  showSellAction = true,
+  buyActionLabel = "Buy",
+  sellActionLabel = "Sell",
 }: {
   position: PortfolioPosition;
   onClose: () => void;
   activityLogs: PortfolioActivityLog[];
-  onBuy: (position: PortfolioPosition) => void;
-  onSell: (position: PortfolioPosition) => void;
+  onBuy?: (position: PortfolioPosition) => void;
+  onSell?: (position: PortfolioPosition) => void;
+  showTradeActions?: boolean;
+  showSellAction?: boolean;
+  buyActionLabel?: string;
+  sellActionLabel?: string;
 }) {
   const [activeTab, setActiveTab] = useState<AssetModalTab>("INFO");
   const holdings = position.platformHoldings;
@@ -684,22 +693,26 @@ function PositionPlatformHoldingsModal({
           >
             Close
           </button>
-          <div className="flex gap-2">
-            <button
-              className={secondaryButtonClassName}
-              onClick={() => onSell(position)}
-              type="button"
-            >
-              Sell
-            </button>
-            <button
-              className={primaryButtonClassName}
-              onClick={() => onBuy(position)}
-              type="button"
-            >
-              Buy
-            </button>
-          </div>
+          {showTradeActions ? (
+            <div className="flex gap-2">
+              {showSellAction ? (
+                <button
+                  className={secondaryButtonClassName}
+                  onClick={() => onSell?.(position)}
+                  type="button"
+                >
+                  {sellActionLabel}
+                </button>
+              ) : null}
+              <button
+                className={primaryButtonClassName}
+                onClick={() => onBuy?.(position)}
+                type="button"
+              >
+                {buyActionLabel}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

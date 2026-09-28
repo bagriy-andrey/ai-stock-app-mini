@@ -6,6 +6,7 @@ import {
   portfolioExchangeFormSchema,
   positionFormSchema,
 } from "@/lib/portfolio/validation";
+import { watchlistItemFormSchema } from "@/lib/watchlist/validation";
 
 describe("portfolio form validation", () => {
   it("normalizes symbols and currencies for positions", () => {
@@ -194,6 +195,49 @@ describe("portfolio form validation", () => {
       portfolioExchangeFormSchema.parse({
         name: "IBKR",
         type: "BROKER",
+      }),
+    ).toThrow();
+  });
+
+  it("validates watchlist items", () => {
+    expect(
+      watchlistItemFormSchema.parse({
+        symbol: " btc ",
+        name: "Bitcoin",
+        assetType: AssetType.CRYPTO,
+        assetCurrency: " usd ",
+        exchange: "",
+        provider: " coingecko ",
+        providerSymbol: " bitcoin ",
+        investmentIntent: InvestmentIntent.LONG_TERM,
+        priority: "HIGH",
+        targetEntryPrice: "",
+        notes: "",
+      }),
+    ).toMatchObject({
+      symbol: "BTC",
+      assetCurrency: "USD",
+      exchange: null,
+      provider: "coingecko",
+      providerSymbol: "bitcoin",
+      priority: "HIGH",
+      targetEntryPrice: null,
+      notes: null,
+    });
+
+    expect(() =>
+      watchlistItemFormSchema.parse({
+        symbol: "NVDA",
+        name: "NVIDIA",
+        assetType: AssetType.STOCK,
+        assetCurrency: "USD",
+        exchange: "NASDAQ",
+        provider: "fmp",
+        providerSymbol: "NVDA",
+        investmentIntent: InvestmentIntent.TACTICAL,
+        priority: "MEDIUM",
+        targetEntryPrice: "-1",
+        notes: "",
       }),
     ).toThrow();
   });
