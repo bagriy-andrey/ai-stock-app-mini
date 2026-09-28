@@ -229,7 +229,7 @@ Portfolio base currency is user-selectable between USD, EUR, and PLN and is pers
 
 ### Implement the first AI analysis layer inside the Next.js application
 
-Phase 2 starts with a TypeScript analysis orchestration layer inside the existing Next.js application. It should use TauricResearch/TradingAgents as a reference for roles and workflow, but should not copy the framework wholesale or introduce a separate Python/FastAPI service yet.
+Phase 2 starts with a TypeScript analysis orchestration layer inside the existing Next.js application. It uses TauricResearch/TradingAgents as a reference for roles and workflow, but does not copy the framework wholesale or introduce a separate Python/FastAPI service yet.
 
 The future AI service boundary should remain clean so LangGraph, TradingAgents, or a Python worker service can be introduced later if orchestration complexity, latency, or dependency requirements justify it.
 
@@ -238,6 +238,10 @@ The future AI service boundary should remain clean so LangGraph, TradingAgents, 
 Initial AI agents are defined in code and versioned with the repository. Phase 2 does not add a UI for unrestricted custom agent creation.
 
 Later phases may add UI-configurable agent profiles, model assignments, risk modes, and paper-trading strategy settings. Stable agent identities and prompt/schema versions are required so analysis quality, costs, and future outcomes can be compared over time.
+
+### Allow UI selection of OpenRouter models by tier
+
+Phase 2 allows the user to choose the primary OpenRouter model for each logical tier from `/settings/models`. Agents still request `cheap`, `standard`, or `strong`; the selected provider model remains behind the routing abstraction. Environment variables remain the fallback when no tier setting is saved in the database.
 
 ### Treat adaptive learning as calibration, not self-modifying code
 
@@ -254,5 +258,7 @@ Structured forecast records with horizons, probabilities, versioning, and future
 ### Preserve point-in-time analysis context
 
 Each AI analysis run should store an input snapshot containing the asset, market price freshness, portfolio/watchlist context, selected intent, provider provenance, and missing-data warnings visible to the agents at the time of analysis.
+
+Phase 2 stores this immutable JSON snapshot on `AgentRun.inputSnapshot`. A shared `InputSnapshot` table is deferred until forecasts, scanners, and learning workflows need cross-domain snapshot references.
 
 This keeps manual analysis reviewable and prepares the system for later forecast evaluation and learning without data leakage.

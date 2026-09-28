@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { startWatchlistAnalysis } from "@/app/analysis/actions";
 import {
   createManualPrice,
   createPosition,
@@ -90,6 +91,7 @@ export default async function WatchlistPage() {
           items={watchlist.items}
           portfolioPositions={portfolio.positions}
           sellPositionAction={sellPosition}
+          startAnalysisAction={startWatchlistAnalysis}
           updateAction={updateWatchlistItem}
           updatePriceAction={createManualPrice}
         />

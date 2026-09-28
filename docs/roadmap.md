@@ -8,10 +8,10 @@ Completed:
 
 - Phase 0 foundation.
 - Phase 1 real portfolio, cash, platform/exchange holdings, watchlist, manual latest-price snapshots, price freshness, MVP FX conversion, and stabilization checks.
+- Phase 2 Deep Analysis MVP: manual portfolio/watchlist AI analysis trigger, code-defined TypeScript agent flow, persisted runs/reports/reasoning summaries, immutable run snapshots, model usage linkage, and history/detail UI.
 
 Not yet implemented:
 
-- Deep Analysis runs.
 - Scanners and event detection.
 - Forecast Engine and immutable predictions.
 - Outcome evaluation.
@@ -32,6 +32,8 @@ Status: complete.
 Scope: real advisory-only portfolio workflows, platform/exchange records, cash balances, manual buy/sell bookkeeping, platform-level holdings, watchlist CRUD, asset catalog, manual latest-price snapshots, portfolio valuation, P&L, allocation, price freshness, and supported-currency FX conversion.
 
 ## Phase 2 - Deep Analysis MVP
+
+Status: complete.
 
 Objective: implement manually triggered Deep Analysis for selected portfolio/watchlist assets.
 

@@ -6,6 +6,8 @@ Use OpenRouter as the primary LLM gateway to access multiple model providers thr
 
 Initial model selection is configuration-based. Later routing may use measured historical performance, cost, latency, task type, asset type, horizon, and market regime.
 
+Phase 2 supports selecting the primary OpenRouter model for each logical tier from the UI at `/settings/models`. Environment variables remain the fallback when no database setting exists for a tier.
+
 ## Model Tiers
 
 Agents should request logical tiers rather than hardcoded model names:
@@ -74,6 +76,8 @@ Persist each AI call with:
 Eventually compare model quality per dollar using prediction accuracy, alpha, latency, and cost by agent, model, asset type, horizon, and market regime.
 
 Every important AI output should record at minimum provider, model, prompt/template version, timestamp, and cost/token metadata when available.
+
+OpenRouter model catalog pricing is displayed in the UI as prompt/output price per 1M tokens plus an estimated single-call cost. The estimate is only a planning aid because actual cost depends on real input and output token counts for each request.
 
 ## Task Profiles
 

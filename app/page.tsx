@@ -4,6 +4,8 @@ import { ExchangeRatesWidget } from "@/components/market-data/exchange-rates-wid
 const modules = [
   { href: "/portfolio", label: "Portfolio" },
   { href: "/watchlist", label: "Watchlist" },
+  { href: "/analysis", label: "Deep Analysis" },
+  { href: "/settings/models", label: "Model Settings" },
   { href: null, label: "Opportunities" },
   { href: null, label: "Predictions" },
   { href: null, label: "Reports" },
@@ -16,7 +18,7 @@ export default function Home() {
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
         <header className="border-b border-zinc-200 pb-6">
-          <p className="text-sm font-medium text-emerald-700">Phase 1</p>
+          <p className="text-sm font-medium text-emerald-700">Phase 2</p>
           <h1 className="mt-2 text-3xl font-semibold">
             AI Investment Assistant
           </h1>
@@ -30,7 +32,7 @@ export default function Home() {
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded border border-zinc-200 bg-white p-4">
             <p className="text-sm font-medium text-zinc-500">App status</p>
-            <p className="mt-2 text-xl font-semibold">Portfolio UI</p>
+            <p className="mt-2 text-xl font-semibold">Deep Analysis MVP</p>
           </div>
           <div className="rounded border border-zinc-200 bg-white p-4">
             <p className="text-sm font-medium text-zinc-500">Real portfolio</p>

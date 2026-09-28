@@ -90,6 +90,7 @@ export function WatchlistTable({
   portfolioPositions,
   createPositionAction,
   sellPositionAction,
+  startAnalysisAction,
   updatePriceAction,
 }: {
   items: WatchlistItemSummary[];
@@ -102,6 +103,7 @@ export function WatchlistTable({
   portfolioPositions: PortfolioPosition[];
   createPositionAction: (formData: FormData) => Promise<void>;
   sellPositionAction: (formData: FormData) => Promise<void>;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   updatePriceAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, selectActiveTab] = useStoredWatchlistTab();
@@ -186,6 +188,7 @@ export function WatchlistTable({
               item={item}
               key={item.id}
               onOpen={setSelectedItem}
+              startAnalysisAction={startAnalysisAction}
               onUpdatePrice={setPriceItem}
             />
           ))}
@@ -291,11 +294,13 @@ function WatchlistWidget({
   item,
   deleteAction,
   onOpen,
+  startAnalysisAction,
   onUpdatePrice,
 }: {
   item: WatchlistItemSummary;
   deleteAction: (formData: FormData) => Promise<void>;
   onOpen: (item: WatchlistItemSummary) => void;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   onUpdatePrice: (item: WatchlistItemSummary) => void;
 }) {
   return (
@@ -367,6 +372,19 @@ function WatchlistWidget({
           </Badge>
         ) : null}
       </div>
+      <form
+        action={startAnalysisAction}
+        className="self-end"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <input name="watchlistItemId" type="hidden" value={item.id} />
+        <button
+          className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+          type="submit"
+        >
+          AI analysis
+        </button>
+      </form>
     </div>
   );
 }

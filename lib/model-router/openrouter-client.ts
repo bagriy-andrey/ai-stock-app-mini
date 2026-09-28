@@ -18,6 +18,27 @@ type OpenRouterResponse = {
   };
 };
 
+export type OpenRouterModel = {
+  id: string;
+  name: string;
+  context_length?: number;
+  pricing?: {
+    prompt?: string;
+    completion?: string;
+    request?: string;
+  };
+  architecture?: {
+    input_modalities?: string[];
+    output_modalities?: string[];
+    modality?: string;
+  };
+  supported_parameters?: string[];
+};
+
+type OpenRouterModelsResponse = {
+  data?: OpenRouterModel[];
+};
+
 export class OpenRouterClient {
   constructor(
     private readonly apiKey = env.OPENROUTER_API_KEY,
@@ -53,5 +74,32 @@ export class OpenRouterClient {
       inputTokens: data.usage?.prompt_tokens,
       outputTokens: data.usage?.completion_tokens,
     };
+  }
+
+  async listModels(): Promise<OpenRouterModel[]> {
+    if (!this.apiKey) {
+      throw new Error("OPENROUTER_API_KEY is not configured");
+    }
+
+    const response = await fetch(
+      `${this.baseUrl}/models?output_modalities=text&sort=pricing-low-to-high&limit=1000`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `OpenRouter models request failed with status ${response.status}`,
+      );
+    }
+
+    const data = (await response.json()) as OpenRouterModelsResponse;
+
+    return (data.data ?? []).filter((model) =>
+      model.architecture?.output_modalities?.includes("text") ?? true,
+    );
   }
 }

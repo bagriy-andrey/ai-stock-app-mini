@@ -7,6 +7,9 @@ This is a conceptual data model. Exact schema design belongs in implementation p
 Implemented today:
 
 - `AiUsageRecord`
+- `AgentRun`
+- `AnalysisReport`
+- `AgentReasoningSummary`
 - `Asset`
 - `Portfolio`
 - `PortfolioExchange`
@@ -19,10 +22,8 @@ Implemented today:
 
 Not implemented yet:
 
-- analysis runs and analysis reports
 - scanners and scanner signals
 - market events and event entities
-- immutable input snapshots
 - predictions, prediction scenarios, outcomes, and evaluations
 - paper portfolios, positions, orders, trades, and NAV
 - market observations, learned patterns, lessons, learning runs, reports, and alerts
@@ -120,7 +121,7 @@ The original report remains the canonical record.
 
 ## Input Snapshots
 
-Every important analysis, forecast, evaluation, and backtest should reference an immutable input snapshot.
+Every important analysis, forecast, evaluation, and backtest should reference an immutable input snapshot. Phase 2 stores the Deep Analysis snapshot directly on `AgentRun.inputSnapshot`; later phases may factor this into a shared `InputSnapshot` table if forecasts, scanners, and learning workflows need a common reference.
 
 Potential snapshot contents:
 

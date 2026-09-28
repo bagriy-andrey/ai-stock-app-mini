@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { startPortfolioAnalysis } from "@/app/analysis/actions";
 import {
   createManualPrice,
   createPortfolioExchange,
@@ -125,6 +126,7 @@ export default async function PortfolioPage() {
           deleteCashBalanceAction={deleteCashBalance}
           deletePositionAction={deletePosition}
           sellPositionAction={sellPosition}
+          startAnalysisAction={startPortfolioAnalysis}
           positions={portfolio.positions}
           upsertCashBalanceAction={upsertCashBalance}
           updatePriceAction={createManualPrice}

@@ -158,6 +158,7 @@ export function PortfolioTablesTabs({
   updatePositionAction,
   deletePositionAction,
   sellPositionAction,
+  startAnalysisAction,
   upsertCashBalanceAction,
   withdrawCashBalanceAction,
   deleteCashBalanceAction,
@@ -175,6 +176,7 @@ export function PortfolioTablesTabs({
   updatePositionAction: (formData: FormData) => Promise<void>;
   deletePositionAction: (formData: FormData) => Promise<void>;
   sellPositionAction: (formData: FormData) => Promise<void>;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   upsertCashBalanceAction: (formData: FormData) => Promise<void>;
   withdrawCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
@@ -252,6 +254,7 @@ export function PortfolioTablesTabs({
           title="Crypto"
           updateAction={updatePositionAction}
           sellAction={sellPositionAction}
+          startAnalysisAction={startAnalysisAction}
           updatePriceAction={updatePriceAction}
           valuationPositions={valuationPositions}
         />
@@ -282,6 +285,7 @@ export function PortfolioTablesTabs({
           title="Stocks & ETF"
           updateAction={updatePositionAction}
           sellAction={sellPositionAction}
+          startAnalysisAction={startAnalysisAction}
           updatePriceAction={updatePriceAction}
           valuationPositions={valuationPositions}
         />
@@ -405,6 +409,7 @@ function PositionsTable({
   updateAction,
   deleteAction,
   sellAction,
+  startAnalysisAction,
   createAction,
   updatePriceAction,
   activityLogs,
@@ -420,6 +425,7 @@ function PositionsTable({
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
   sellAction: (formData: FormData) => Promise<void>;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   createAction: (formData: FormData) => Promise<void>;
   updatePriceAction: (formData: FormData) => Promise<void>;
   activityLogs: PortfolioActivityLog[];
@@ -541,6 +547,19 @@ function PositionsTable({
                         updatePriceAction={updatePriceAction}
                         updateAction={updateAction}
                       />
+                      <form action={startAnalysisAction} className="mt-2">
+                        <input
+                          name="positionId"
+                          type="hidden"
+                          value={position.id}
+                        />
+                        <button
+                          className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                          type="submit"
+                        >
+                          AI analysis
+                        </button>
+                      </form>
                     </td>
                   </tr>
                 );

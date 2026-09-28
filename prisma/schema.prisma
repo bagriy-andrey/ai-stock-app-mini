@@ -12,6 +12,21 @@ enum AiCallStatus {
   ERROR
 }
 
+enum AgentRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+enum AgentStance {
+  BULLISH
+  BEARISH
+  NEUTRAL
+  MIXED
+}
+
 enum AssetType {
   STOCK
   ETF
@@ -43,6 +58,7 @@ enum PortfolioExchangeType {
 
 model AiUsageRecord {
   id           String       @id @default(cuid())
+  agentRunId   String?
   agent        String
   ticker       String?
   model        String
@@ -54,11 +70,24 @@ model AiUsageRecord {
   status       AiCallStatus
   errorMessage String?
   createdAt    DateTime     @default(now())
+  agentRun      AgentRun?    @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
 
+  @@index([agentRunId])
   @@index([agent])
   @@index([model])
   @@index([modelTier])
   @@index([createdAt])
+}
+
+model AiModelTierSetting {
+  tier         String   @id
+  primaryModel String
+  modelName    String?
+  promptPrice  Decimal? @db.Decimal(18, 12)
+  completionPrice Decimal? @db.Decimal(18, 12)
+  requestPrice Decimal? @db.Decimal(18, 12)
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 }
 
 model Asset {
@@ -77,6 +106,8 @@ model Asset {
   positions      Position[]
   watchlistItems WatchlistItem[]
   marketPrices   MarketPrice[]
+  agentRuns      AgentRun[]
+  analysisReports AnalysisReport[]
 
   @@unique([provider, providerSymbol])
   @@index([symbol])
@@ -93,6 +124,7 @@ model Portfolio {
   cashBalances CashBalance[]
   activityLogs PortfolioActivityLog[]
   exchanges    PortfolioExchange[]
+  agentRuns    AgentRun[]
 }
 
 model PortfolioExchange {
@@ -124,6 +156,7 @@ model Position {
   portfolio        Portfolio                 @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   asset            Asset                     @relation(fields: [assetId], references: [id], onDelete: Restrict)
   platformHoldings PositionPlatformHolding[]
+  agentRuns        AgentRun[]
 
   @@unique([portfolioId, assetId])
   @@index([portfolioId])
@@ -188,6 +221,7 @@ model WatchlistItem {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   asset            Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  agentRuns        AgentRun[]
 
   @@index([investmentIntent])
   @@index([priority])
@@ -208,4 +242,84 @@ model MarketPrice {
   @@index([assetId, observedAt])
   @@index([provider, providerSymbol])
   @@index([ingestedAt])
+}
+
+model AgentRun {
+  id                 String                  @id @default(cuid())
+  assetId            String
+  portfolioId        String?
+  positionId         String?
+  watchlistItemId    String?
+  requestedIntent    InvestmentIntent
+  status             AgentRunStatus          @default(PENDING)
+  inputSnapshot      Json
+  startedAt          DateTime?
+  completedAt        DateTime?
+  errorMessage       String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  asset              Asset                   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  portfolio          Portfolio?              @relation(fields: [portfolioId], references: [id], onDelete: SetNull)
+  position           Position?               @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  watchlistItem      WatchlistItem?          @relation(fields: [watchlistItemId], references: [id], onDelete: SetNull)
+  report             AnalysisReport?
+  reasoningSummaries AgentReasoningSummary[]
+  usageRecords       AiUsageRecord[]
+
+  @@index([assetId])
+  @@index([portfolioId])
+  @@index([positionId])
+  @@index([watchlistItemId])
+  @@index([requestedIntent])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AnalysisReport {
+  id                  String     @id @default(cuid())
+  agentRunId          String     @unique
+  assetId             String
+  language            String
+  title               String
+  summary             String
+  recommendationLabel String
+  confidence          Decimal    @db.Decimal(5, 4)
+  riskLevel           String
+  timeHorizon         String
+  thesis              Json
+  opportunities       Json
+  risks               Json
+  portfolioFit        String
+  missingDataWarnings Json
+  rawOutput           Json
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  agentRun            AgentRun   @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  asset               Asset      @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@index([assetId])
+  @@index([createdAt])
+  @@index([recommendationLabel])
+  @@index([riskLevel])
+}
+
+model AgentReasoningSummary {
+  id            String      @id @default(cuid())
+  agentRunId    String
+  agentName     String
+  agentRole     String
+  modelTier     String
+  model         String?
+  promptVersion String
+  summary       String
+  stance        AgentStance
+  confidence    Decimal?    @db.Decimal(5, 4)
+  rawOutput     Json
+  createdAt     DateTime    @default(now())
+  agentRun      AgentRun    @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@index([agentRunId])
+  @@index([agentName])
+  @@index([stance])
+  @@index([createdAt])
 }
