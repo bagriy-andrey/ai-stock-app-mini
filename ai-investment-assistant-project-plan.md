@@ -1,5 +1,7 @@
 # AI Investment Assistant - Project Plan & Codex Handoff
 
+> Historical handoff note: this document preserves earlier project planning context. The current source of truth is the reconciled documentation under `docs/`, especially `docs/architecture/system-architecture.md`, `docs/architecture-audit-2026-09-28.md`, `docs/roadmap.md`, and the feature specs. If this handoff conflicts with those files, follow the reconciled docs.
+
 ## 1. Project vision
 
 Build a small personal web application that acts as an AI investment assistant.

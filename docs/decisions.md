@@ -42,6 +42,30 @@ Prediction quality, confidence calibration, benchmark return, alpha, and paper t
 
 Backtesting and forecast evaluation must not use data unavailable at the simulated timestamp.
 
+### Treat TradingAgents as Deep Analysis Engine
+
+TradingAgents or TradingAgents-inspired code is a deep-analysis component for selected assets. The application owns scanners, event detection, market memory, forecast persistence, portfolio state, Paper Trader execution, reports, scheduling, evaluation, learning, and cost tracking.
+
+### Use scanner-first analysis funnel
+
+The default architecture is deterministic calculations, lightweight scanners, cheap AI classification where useful, candidate ranking, and then expensive Deep Analysis only for selected assets. Do not continuously run multi-agent LLM analysis for every asset.
+
+### Separate Forecast Engine from Deep Analysis
+
+Deep Analysis explains what is happening, why it matters, bull/bear cases, risks, and investment stance. Forecast Engine owns structured probabilistic price forecasts with horizons, scenarios, probabilities, confidence, input snapshots, and later outcome evaluation.
+
+### Store market events and market observations
+
+News and external information should be converted into structured market events. Market observations or historical cases should combine event, context, and future outcomes so learned patterns can be traced and retrieved later.
+
+### Separate market learning from agent learning
+
+Market learning measures how markets behaved under similar conditions. Agent learning measures where the system's own agents, prompts, models, or strategies made systematic mistakes. Store and evaluate them separately.
+
+### Keep reports and learning artifacts separate
+
+User-facing reports inform the user. Internal learning reports produce evidence, lessons, and weight suggestions for future retrieval and validation. They should not blindly rewrite production behavior.
+
 ## Open Decisions
 
 ### Frontend/backend split

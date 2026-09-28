@@ -1,12 +1,12 @@
-# 002 - Phase 2 AI Market Intelligence Plan
+# 002 - Phase 2 Deep Analysis MVP Plan
 
 ## Objective
 
-Build the first AI-powered workflow for the application: manually triggered, portfolio-aware asset analysis for stocks, ETFs, and crypto.
+Build the first AI-powered workflow for the application: manually triggered, portfolio-aware Deep Analysis for stocks, ETFs, and crypto.
 
 Phase 2 should let the user run a structured multi-agent analysis for assets such as BTC, NVDA, and SPY, inspect balanced reasoning, understand portfolio fit, and persist the result for later review.
 
-This phase is the foundation for later structured forecasts, automated monitoring, reports, Paper Trader, and learning workflows. It should not attempt to implement all of those future systems at once.
+This phase is the foundation for later scanners, structured events, forecasts, automated monitoring, reports, Paper Trader, and learning workflows. It should not attempt to implement all of those future systems at once.
 
 ## Phase 2 Scope
 
@@ -21,12 +21,16 @@ This phase is the foundation for later structured forecasts, automated monitorin
 - AI usage, latency, status, and cost tracking
 - Persisted analysis runs and reports
 - Saved reasoning summaries by agent
+- Immutable input snapshots
 - Basic analysis history and report detail UI
 - Focused tests for context building, output validation, model fallback, and persistence behavior
 
 ## Non-Goals
 
 - Automated monitoring
+- Lightweight scanners
+- Structured event detection
+- Market Intelligence Memory / Pattern Engine
 - Scheduled reports
 - Telegram notifications
 - Opportunity scanner for broad assets outside the user's portfolio/watchlist
@@ -49,6 +53,8 @@ AI reports are not yet normalized forecasts. They may contain directional opinio
 
 Paper trading is not part of Phase 2. Any language that sounds like a trade instruction must be framed as advisory analysis for the user, not as an executable action.
 
+TradingAgents-inspired agents are the Deep Analysis Engine only. They must not own scheduling, scanner rules, the watchlist, the real portfolio, Paper Trader execution, reporting, or learning persistence.
+
 ## Recommended MVP Architecture
 
 Continue using the Phase 0/1 monolithic Next.js application for Phase 2:
@@ -57,7 +63,7 @@ Continue using the Phase 0/1 monolithic Next.js application for Phase 2:
 - Server actions or route handlers for analysis requests
 - Prisma as the persistence layer
 - Existing `ModelRouter` and `OpenRouterClient` as the LLM boundary
-- A TypeScript analysis orchestration layer inspired by TradingAgents
+- A TypeScript Deep Analysis orchestration layer inspired by TradingAgents
 - No separate Python/FastAPI service yet
 
 Do not introduce LangGraph, Celery, Redis, BullMQ, or a separate worker service in Phase 2 unless manual analysis latency becomes unmanageable.
@@ -112,6 +118,8 @@ Each analysis run should persist enough input context to explain what the AI saw
 - provider provenance and missing-data warnings
 
 This supports later review, reproducibility, and point-in-time correctness.
+
+Later phases should extend snapshots with scanner signals, structured market events, and retrieved learned patterns. Phase 2 should design the snapshot shape so these inputs can be added without changing the responsibility boundary.
 
 ## Agent Flow
 
@@ -436,4 +444,3 @@ Phase 2 is complete when:
 - real portfolio workflows remain advisory-only
 - no Paper Trader or automated monitoring behavior is introduced
 - lint, typecheck, tests, and build pass
-

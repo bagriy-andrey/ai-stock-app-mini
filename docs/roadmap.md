@@ -1,101 +1,180 @@
 # Roadmap
 
+This roadmap reflects the verified implementation state as of 2026-09-28 and the reconciled target architecture. Implementation phases do not have to match the conceptual architecture one-to-one, but responsibility boundaries must remain clear.
+
+## Current Status
+
+Completed:
+
+- Phase 0 foundation.
+- Phase 1 real portfolio, cash, platform/exchange holdings, watchlist, manual latest-price snapshots, price freshness, MVP FX conversion, and stabilization checks.
+
+Not yet implemented:
+
+- Deep Analysis runs.
+- Scanners and event detection.
+- Forecast Engine and immutable predictions.
+- Outcome evaluation.
+- Paper Trader.
+- Market Intelligence Memory, learned patterns, and learning cycles.
+- Reports, alerts, Telegram delivery, and report translations.
+
 ## Phase 0 - Foundation
 
-Objective: create the base project and architecture.
+Status: complete.
 
-Scope: repository structure, frontend skeleton, backend skeleton, database, environment configuration, OpenRouter integration, model router abstraction, scheduler foundation, logging, i18n foundation, and basic application configuration.
+Scope: repository structure, frontend skeleton, API skeleton, Prisma/PostgreSQL setup, environment configuration, OpenRouter client, model-router abstraction, scheduler foundation, logging, tests, and local development workflow.
 
-Dependencies: documentation bootstrap and architecture decisions for initial stack.
+## Phase 1 - Portfolio and Watchlist
 
-Completion criteria: project can run locally with baseline app/API structure, configuration, logging, and test foundation.
+Status: complete.
 
-## Phase 1 - Portfolio & Watchlist
+Scope: real advisory-only portfolio workflows, platform/exchange records, cash balances, manual buy/sell bookkeeping, platform-level holdings, watchlist CRUD, asset catalog, manual latest-price snapshots, portfolio valuation, P&L, allocation, price freshness, and supported-currency FX conversion.
 
-Objective: build non-AI portfolio and watchlist workflows.
+## Phase 2 - Deep Analysis MVP
 
-Scope: manually add/edit/remove positions, cash balance, watchlist CRUD, stock/ETF/crypto asset types, basic market prices, portfolio value, P&L, allocation, and provider abstraction for the initial market-data stack.
+Objective: implement manually triggered Deep Analysis for selected portfolio/watchlist assets.
 
-Dependencies: foundation and database.
+Scope:
 
-Completion criteria: user can maintain portfolio and watchlist without AI.
+- TradingAgents-inspired TypeScript agent orchestration inside the existing Next.js app.
+- Analyst roles, bull/bear debate, Research Manager, Risk Analyst, and Portfolio Manager.
+- Asset intent routing for `LONG_TERM` and `TACTICAL`.
+- Immutable input snapshots for every analysis run.
+- Persisted `AgentRun`, `AnalysisReport`, and agent reasoning summaries.
+- `AiUsageRecord` linkage to analysis runs with provider, model, tier, prompt/template version, token/cost/latency metadata where available.
+- Report history/detail UI.
 
-## Phase 2 - AI Market Intelligence
+Non-goals:
 
-Objective: integrate manually triggered AI analysis.
+- Automated monitoring.
+- Structured Forecast Engine records.
+- Paper Trader.
+- Learning cycles.
+- Broad scanners.
 
-Scope: TradingAgents or adapted architecture, initial analyst roles, research debate, risk analysis, portfolio manager, manual asset analysis.
+Completion criteria: user can manually run portfolio-aware analysis for supported assets and later review exactly what the agents knew at the time.
 
-Dependencies: model router, OpenRouter, basic market data.
+## Phase 3 - Lightweight Scanners and Event Detection
 
-Completion criteria: user can manually analyze assets such as BTC, NVDA, and SPY.
+Objective: build the cheap funnel that decides what deserves deep analysis.
 
-## Phase 3 - Automated Monitoring
+Scope:
 
-Objective: add scheduled monitoring and alerts.
+- Portfolio Scanner.
+- Watchlist Scanner.
+- Opportunity/market scanner over a configured discovery universe.
+- Crypto Scanner where practical.
+- News/Event Scanner.
+- Scanner runs and scanner signals.
+- Structured event detection and extensible market-event taxonomy.
+- Candidate ranking and material-change thresholds.
 
-Scope: scheduler, owned/watchlist analysis, persisted reports, changed-outlook detection, portfolio alerts, morning/evening reports, daily/weekly/monthly/quarterly/yearly reports, Telegram notifications, and on-demand report translation.
+Completion criteria: system can cheaply surface high-priority candidates without running deep LLM analysis for every asset.
 
-Dependencies: AI analysis and scheduler foundation.
+## Phase 4 - TradingAgents Integration Hardening
 
-Completion criteria: system produces automated monitoring outputs on configurable cadence.
+Objective: harden the Deep Analysis Engine around scanner/event/pattern inputs.
 
-## Phase 4 - Opportunity Scanner
+Scope:
 
-Objective: scan assets outside the portfolio.
+- Feed scanner signals and structured events into analysis snapshots.
+- Add retrieved historical cases/patterns when available.
+- Preserve TradingAgents-inspired roles while keeping application-owned state and orchestration.
+- Prepare a clean boundary for a future Python/LangGraph/TradingAgents service if needed.
 
-Scope: discovery universe, opportunity score, long-term and tactical opportunity detection, add-to-watchlist flow.
+Completion criteria: Deep Analysis consumes application-normalized snapshots and remains clearly separate from scanning, forecasting, portfolio state, and paper execution.
 
-Dependencies: market data, AI analysis, watchlist.
+## Phase 5 - Forecast Engine and Prediction Persistence
 
-Completion criteria: system surfaces new opportunities with reasons, risks, confidence, and suggested action.
+Objective: create immutable structured forecasts.
 
-## Phase 5 - Forecast Engine
+Scope:
 
-Objective: create normalized structured predictions.
+- Forecast Engine separate from Deep Analysis.
+- Horizons appropriate to asset and strategy, such as 1h, 1d, 3d, 7d, 30d, 90d, and 1y.
+- Bear/base/bull scenarios, probabilities, expected return, expected price where useful, confidence, direction probability, and forecast horizon.
+- Prediction and scenario persistence.
+- Links to input snapshot, analysis run, market events, and historical patterns.
 
-Scope: tactical and long-term horizons, scenarios, probabilities, confidence, structured storage, forecast versioning.
+Completion criteria: forecasts are immutable structured records eligible for later evaluation.
 
-Dependencies: AI analysis and prediction persistence.
+## Phase 6 - Outcome Evaluation and Point-in-Time Evaluation
 
-Completion criteria: forecasts are stored in a form that can be evaluated later.
+Objective: settle matured forecasts and measure usefulness.
 
-## Phase 6 - Outcome Evaluation
+Scope:
 
-Objective: evaluate completed predictions.
+- Outcome settlement jobs.
+- Actual price and benchmark retrieval.
+- Direction correctness, price error, realized return, scenario hit, calibration, alpha, maximum adverse excursion, and maximum favorable excursion where useful.
+- Guardrails against future-data leakage in evaluation and backtesting.
 
-Scope: forecast resolution, actual-vs-forecast comparison, accuracy, error, benchmark return, alpha, confidence calibration, analytics screens.
+Completion criteria: user and system can inspect forecast quality without reducing everything to one accuracy number.
 
-Dependencies: forecast engine and market data.
+## Phase 7 - Paper Trader
 
-Completion criteria: user can inspect prediction quality over time.
+Objective: evaluate whether the full AI decision system creates useful virtual portfolio outcomes.
 
-## Phase 7 - AI Paper Trader
+Scope:
 
-Objective: add isolated autonomous mock trading.
+- Separate paper portfolios, virtual cash, positions, orders, fills/trades, NAV, realized/unrealized P&L, drawdown, and benchmark comparison.
+- Strategy configuration and risk constraints.
+- Virtual execution only.
+- Comparison by strategy, model, agent, asset type, and horizon.
 
-Scope: virtual portfolio, virtual cash, mock decisions, transaction ledger, position sizing, risk constraints, performance metrics, benchmark comparison, and comparison across multiple agents, models, and strategy configurations.
+Completion criteria: Paper Trader can act autonomously with virtual money and cannot modify real portfolio state.
 
-Dependencies: forecasts, risk data, market data.
+## Phase 8 - Market Intelligence Memory and Pattern Engine
 
-Completion criteria: paper strategies can trade virtual assets without touching the real portfolio.
+Objective: accumulate historical market experience.
 
-## Phase 8 - Adaptive Learning
+Scope:
 
-Objective: calibrate decision process from outcomes.
+- Market observations / historical cases.
+- Event plus context plus future outcome records.
+- Learned patterns with observation count, first/last seen, recent and long-term evidence, regime, confidence, significance where practical, data version, and pattern version.
+- Ability to record "no meaningful relationship exists."
+- Initial Impact Graph relationships as hypotheses for discovery, not guaranteed truths.
 
-Scope: agent performance, performance by horizon/asset/regime, dynamic weights, confidence calibration, reflection memory, mathematical performance layer.
+Completion criteria: future analysis can retrieve relevant historical cases and pattern evidence known at the decision timestamp.
 
-Dependencies: outcome evaluation and sufficient historical data.
+## Phase 9 - Periodic Learning Cycles
 
-Completion criteria: system can adjust weighting recommendations based on measured historical performance.
+Objective: turn outcomes into durable lessons.
 
-## Phase 9 - Model Optimization
+Scope:
 
-Objective: optimize model quality and cost.
+- Weekly learning.
+- Monthly learning.
+- Quarterly learning.
+- Yearly learning.
+- Separate market learning and agent learning.
+- Internal learning reports distinct from user-facing reports.
+- Versioned lessons and weight suggestions.
 
-Scope: OpenRouter experiments, quality-vs-cost comparison, automatic model-tier recommendations, cost budgets, fallback routing, model performance tracking.
+Completion criteria: the system can generate traceable lessons and calibration suggestions without blindly rewriting production behavior.
 
-Dependencies: model routing, AI cost tracking, prediction quality metrics.
+## Phase 10 - Adaptive Signal and Model Weighting
 
-Completion criteria: system can compare models by cost, latency, and investment-analysis quality.
+Objective: use accumulated evidence to improve routing and decision support.
+
+Scope:
+
+- Signal performance metrics.
+- Model performance metrics by task, asset type, horizon, and regime.
+- Agent performance metrics.
+- Quality-vs-cost analysis.
+- Suggested model-tier changes and signal weights.
+
+Completion criteria: routing and weighting recommendations are based on measured historical performance, cost, and latency.
+
+## Deferrals
+
+- Real brokerage execution.
+- High-frequency trading.
+- Continuous expensive LLM analysis for every asset.
+- Model fine-tuning and reinforcement learning.
+- Autonomous prompt/code rewriting.
+- Advanced paid on-chain/social providers before measured value is proven.
+- Microservice-heavy architecture before workload requires it.

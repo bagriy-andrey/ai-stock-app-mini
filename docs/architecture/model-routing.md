@@ -4,6 +4,8 @@
 
 Use OpenRouter as the primary LLM gateway to access multiple model providers through one API, avoid provider lock-in, optimize cost, support fallbacks, and compare model quality.
 
+Initial model selection is configuration-based. Later routing may use measured historical performance, cost, latency, task type, asset type, horizon, and market regime.
+
 ## Model Tiers
 
 Agents should request logical tiers rather than hardcoded model names:
@@ -20,6 +22,10 @@ models:
 
 Initial conceptual allocation:
 
+- scanner triage: `cheap`
+- event extraction: `cheap`
+- sentiment classification: `cheap`
+- summaries and structured transformations: `cheap`
 - Market Analyst: `cheap`
 - Sentiment Analyst: `cheap`
 - News Analyst: `cheap`
@@ -32,6 +38,7 @@ Initial conceptual allocation:
 - Portfolio Manager: `strong`
 - Forecast Engine: `strong`
 - Reflection: `cheap` or `standard`
+- Weekly/monthly/quarterly learning analysis: `standard` or `strong`
 - Report Translation: `cheap` or `standard`
 
 ## Fallbacks
@@ -49,18 +56,24 @@ strong primary
 Persist each AI call with:
 
 - agent run id
-- agent
+- task type
+- agent or component
 - ticker
+- provider
 - model
 - model tier
+- prompt/template version
 - input tokens
 - output tokens
 - cost
 - latency
 - timestamp
 - status
+- input snapshot id where applicable
 
 Eventually compare model quality per dollar using prediction accuracy, alpha, latency, and cost by agent, model, asset type, horizon, and market regime.
+
+Every important AI output should record at minimum provider, model, prompt/template version, timestamp, and cost/token metadata when available.
 
 ## Task Profiles
 
@@ -71,5 +84,8 @@ In addition to logical tiers, routing should eventually support task profiles so
 - `reflection`: post-outcome learning summaries
 - `translation`: report translation between Russian and English
 - `paper_trading`: strategy decision support for virtual trades
+- `scanner_triage`: cheap classification or summarization for candidate ranking
+- `event_extraction`: structured market-event extraction from news and external inputs
+- `learning`: weekly, monthly, quarterly, and yearly learning analysis
 
 Task profiles should still resolve through configurable OpenRouter models and persist usage records.

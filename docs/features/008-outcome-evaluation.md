@@ -14,16 +14,21 @@ The user can see whether the system's previous forecasts were good instead of tr
 - Compare forecast vs actual
 - Calculate direction accuracy
 - Calculate price error and absolute error
+- Calculate percentage error
+- Calculate realized return
 - Calculate benchmark return and alpha
 - Track scenario hit rate
 - Track confidence calibration
+- Track maximum adverse excursion and maximum favorable excursion where useful
 - Show prediction quality analytics
+- Preserve point-in-time correctness for historical evaluation
 
 ## Non-Goals
 
 - Adaptive learning implementation
 - Paper Trader profitability analysis
 - Complex ML retraining
+- One universal "accuracy" score for all tasks
 
 ## Inputs
 
@@ -40,6 +45,7 @@ The user can see whether the system's previous forecasts were good instead of tr
 - Alpha
 - Calibration metrics
 - Analytics views
+- Market observation outcome updates where applicable
 
 ## Core Data / Entities
 
@@ -47,6 +53,8 @@ The user can see whether the system's previous forecasts were good instead of tr
 - BenchmarkReturn
 - PredictionError
 - CalibrationMetric
+- PredictionEvaluation
+- MarketObservation
 
 ## Main Flows
 
@@ -54,6 +62,7 @@ The user can see whether the system's previous forecasts were good instead of tr
 - System fetches actual and benchmark prices
 - Metrics are calculated
 - Prediction is marked resolved
+- Related market observations are updated as horizons mature
 - Analytics update
 
 ## Edge Cases
@@ -75,6 +84,8 @@ The user can see whether the system's previous forecasts were good instead of tr
 - Completed predictions are resolved reproducibly
 - Outcome metrics are persisted
 - User can inspect forecast quality over time
+- Evaluation does not use data unavailable at the prediction timestamp
+- Forecast quality remains separate from analysis quality and Paper Trader decision quality
 
 ## Open Questions
 
@@ -86,4 +97,3 @@ The user can see whether the system's previous forecasts were good instead of tr
 - Max adverse excursion
 - Market regime performance
 - Agent-level attribution
-

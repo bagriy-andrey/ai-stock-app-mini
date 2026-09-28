@@ -18,9 +18,13 @@ flowchart TB
   api --> predictions["Prediction Service<br/>структурные прогнозы и outcome"]
 
   scheduler["Scheduler / Workers<br/>периодические проверки и ingestion"] --> ingestion["Market Data Ingestion<br/>provider adapters"]
-  scheduler --> monitoring["Automated Monitoring<br/>portfolio + watchlist + discovery"]
+  scheduler --> scanners["Lightweight Scanners<br/>portfolio + watchlist + market + crypto + news"]
+  scanners --> events["Event Detector<br/>структурные market events"]
+  events --> memory["Market Intelligence Memory<br/>observations + learned patterns"]
+  scanners --> memory
   scheduler --> reportJobs["Report Jobs<br/>daily / weekly / monthly / quarterly / yearly"]
   scheduler --> outcomeJobs["Outcome Resolution Jobs<br/>проверка истекших прогнозов"]
+  scheduler --> learningJobs["Learning Jobs<br/>weekly / monthly / quarterly / yearly"]
 
   ingestion --> fmp["FMP<br/>US stocks/ETF, fundamentals, calendars"]
   ingestion --> coingecko["CoinGecko<br/>crypto spot"]
@@ -37,9 +41,13 @@ flowchart TB
   predictions --> db
   reports --> db
   paper --> db
-  monitoring --> db
+  scanners --> db
+  events --> db
+  memory --> db
 
-  monitoring --> aiService["AI Analysis Service<br/>TradingAgents / LangGraph / custom agents"]
+  scanners --> candidates["Prioritized Candidates<br/>material changes and opportunities"]
+  memory --> candidates
+  candidates --> aiService["Deep Analysis Engine<br/>TradingAgents / adapted agents"]
   web --> aiService
   aiService --> agentRouter["Asset Intent Router<br/>LONG_TERM / TACTICAL / DISCOVERY"]
 
@@ -51,8 +59,11 @@ flowchart TB
   tactical --> forecast
   discovery --> forecast
   forecast --> predictions
+  forecast --> advisor["Portfolio Advisor<br/>advisory-only real portfolio"]
 
   aiService --> modelRouter["Model Router<br/>cheap / standard / strong + task profiles"]
+  scanners --> modelRouter
+  events --> modelRouter
   reports --> modelRouter
   paper --> modelRouter
   modelRouter --> openrouter["OpenRouter<br/>разные LLM модели"]
@@ -61,16 +72,20 @@ flowchart TB
 
   predictions --> evaluation["Outcome Evaluation<br/>actual vs forecast, alpha, calibration"]
   outcomeJobs --> evaluation
-  evaluation --> learning["Learning Engine<br/>agent/model/provider weights, reflection"]
+  evaluation --> learning["Learning Engine<br/>market learning + agent learning"]
+  learningJobs --> learning
   learning --> db
-  learning --> aiService
+  learning --> memory
+  memory --> aiService
 
   predictions --> paper
+  advisor --> reports
   paper --> paperMetrics["Paper Performance Metrics<br/>P&L, drawdown, benchmark, strategy comparison"]
   paperMetrics --> learning
 
   reportJobs --> reports
-  monitoring --> reports
+  scanners --> reports
+  events --> reports
   reports --> telegram["Telegram Bot<br/>alerts and reports"]
   reports --> translations["Cached Report Translations<br/>RU/EN on demand"]
   translations --> db
@@ -81,13 +96,15 @@ flowchart TB
 1. Пользователь вручную ведет портфель, cash и watchlist в браузерном приложении.
 2. Scheduler запускает ingestion только для портфеля, watchlist и настроенного discovery universe.
 3. Данные приходят из FMP, CoinGecko, FRED/ALFRED, SEC EDGAR, GDELT и optional Marketaux. CoinGlass добавляется позже для crypto derivatives.
-4. AI Analysis Service использует TradingAgents/LangGraph/custom agents и проходит через Asset Intent Router.
-5. Forecast Engine сохраняет структурные прогнозы с горизонтом, сценариями, confidence, моделью, агентом и provider provenance.
-6. Outcome Evaluation сравнивает прогнозы с фактическими результатами.
-7. Learning Engine калибрует веса агентов, моделей, сигналов и провайдеров только на основе измеренных результатов.
-8. Paper Trader использует прогнозы для виртуальных сделок и сравнивает стратегии, агентов и модели.
-9. Reports & Alerts генерируют отчеты, Telegram-уведомления и on-demand переводы через OpenRouter с кешированием.
-10. Реальный портфель никогда не исполняет сделки автоматически.
+4. Lightweight Scanners и Event Detector дешево находят важные изменения и структурные события.
+5. Market Intelligence Memory возвращает исторические аналоги и learned patterns, известные на этот момент.
+6. Deep Analysis Engine использует TradingAgents/adapted agents только для приоритетных кандидатов.
+7. Forecast Engine сохраняет структурные прогнозы с горизонтом, сценариями, confidence, моделью, агентом и provider provenance.
+8. Portfolio Advisor дает советы для реального портфеля, а Paper Trader исполняет только виртуальные сделки.
+9. Outcome Evaluation сравнивает прогнозы с фактическими результатами.
+10. Learning Engine обновляет market learning, agent learning и internal lessons на основе измеренных результатов.
+11. Reports & Alerts генерируют пользовательские отчеты, Telegram-уведомления и on-demand переводы через OpenRouter с кешированием.
+12. Реальный портфель никогда не исполняет сделки автоматически.
 
 ## English Version
 
@@ -105,9 +122,13 @@ flowchart TB
   api --> predictions["Prediction Service<br/>structured forecasts and outcomes"]
 
   scheduler["Scheduler / Workers<br/>periodic checks and ingestion"] --> ingestion["Market Data Ingestion<br/>provider adapters"]
-  scheduler --> monitoring["Automated Monitoring<br/>portfolio + watchlist + discovery"]
+  scheduler --> scanners["Lightweight Scanners<br/>portfolio + watchlist + market + crypto + news"]
+  scanners --> events["Event Detector<br/>structured market events"]
+  events --> memory["Market Intelligence Memory<br/>observations + learned patterns"]
+  scanners --> memory
   scheduler --> reportJobs["Report Jobs<br/>daily / weekly / monthly / quarterly / yearly"]
   scheduler --> outcomeJobs["Outcome Resolution Jobs<br/>expired forecast checks"]
+  scheduler --> learningJobs["Learning Jobs<br/>weekly / monthly / quarterly / yearly"]
 
   ingestion --> fmp["FMP<br/>US stocks/ETF, fundamentals, calendars"]
   ingestion --> coingecko["CoinGecko<br/>crypto spot"]
@@ -124,9 +145,13 @@ flowchart TB
   predictions --> db
   reports --> db
   paper --> db
-  monitoring --> db
+  scanners --> db
+  events --> db
+  memory --> db
 
-  monitoring --> aiService["AI Analysis Service<br/>TradingAgents / LangGraph / custom agents"]
+  scanners --> candidates["Prioritized Candidates<br/>material changes and opportunities"]
+  memory --> candidates
+  candidates --> aiService["Deep Analysis Engine<br/>TradingAgents / adapted agents"]
   web --> aiService
   aiService --> agentRouter["Asset Intent Router<br/>LONG_TERM / TACTICAL / DISCOVERY"]
 
@@ -138,8 +163,11 @@ flowchart TB
   tactical --> forecast
   discovery --> forecast
   forecast --> predictions
+  forecast --> advisor["Portfolio Advisor<br/>advisory-only real portfolio"]
 
   aiService --> modelRouter["Model Router<br/>cheap / standard / strong + task profiles"]
+  scanners --> modelRouter
+  events --> modelRouter
   reports --> modelRouter
   paper --> modelRouter
   modelRouter --> openrouter["OpenRouter<br/>multiple LLM models"]
@@ -148,16 +176,20 @@ flowchart TB
 
   predictions --> evaluation["Outcome Evaluation<br/>actual vs forecast, alpha, calibration"]
   outcomeJobs --> evaluation
-  evaluation --> learning["Learning Engine<br/>agent/model/provider weights, reflection"]
+  evaluation --> learning["Learning Engine<br/>market learning + agent learning"]
+  learningJobs --> learning
   learning --> db
-  learning --> aiService
+  learning --> memory
+  memory --> aiService
 
   predictions --> paper
+  advisor --> reports
   paper --> paperMetrics["Paper Performance Metrics<br/>P&L, drawdown, benchmark, strategy comparison"]
   paperMetrics --> learning
 
   reportJobs --> reports
-  monitoring --> reports
+  scanners --> reports
+  events --> reports
   reports --> telegram["Telegram Bot<br/>alerts and reports"]
   reports --> translations["Cached Report Translations<br/>RU/EN on demand"]
   translations --> db
@@ -168,10 +200,12 @@ flowchart TB
 1. The user manually maintains portfolio positions, cash, and watchlist in the web app.
 2. The scheduler runs ingestion only for the portfolio, watchlist, and configured discovery universe.
 3. Data comes from FMP, CoinGecko, FRED/ALFRED, SEC EDGAR, GDELT, and optional Marketaux. CoinGlass is added later for crypto derivatives.
-4. The AI Analysis Service uses TradingAgents/LangGraph/custom agents and passes decisions through the Asset Intent Router.
-5. The Forecast Engine stores structured forecasts with horizon, scenarios, confidence, model, agent, and provider provenance.
-6. Outcome Evaluation compares forecasts against actual results.
-7. The Learning Engine calibrates agent, model, signal, and provider weights only from measured outcomes.
-8. Paper Trader uses forecasts for virtual trades and compares strategies, agents, and models.
-9. Reports & Alerts generate reports, Telegram notifications, and on-demand translations through OpenRouter with caching.
-10. The real portfolio never executes trades automatically.
+4. Lightweight Scanners and Event Detector cheaply identify material changes and structured market events.
+5. Market Intelligence Memory retrieves historical analogs and learned patterns known at that time.
+6. The Deep Analysis Engine uses TradingAgents/adapted agents only for prioritized candidates.
+7. The Forecast Engine stores structured forecasts with horizon, scenarios, confidence, model, agent, and provider provenance.
+8. Portfolio Advisor provides advisory-only real-portfolio guidance, while Paper Trader executes only virtual trades.
+9. Outcome Evaluation compares forecasts against actual results.
+10. The Learning Engine updates market learning, agent learning, and internal lessons from measured outcomes.
+11. Reports & Alerts generate user-facing reports, Telegram notifications, and on-demand translations through OpenRouter with caching.
+12. The real portfolio never executes trades automatically.

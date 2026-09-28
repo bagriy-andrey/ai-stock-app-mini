@@ -7,7 +7,7 @@ The application is primarily intended for long-term investing and portfolio moni
 The product should become a personal AI investment intelligence system that:
 
 - monitors the user's portfolio
-- continuously analyzes a watchlist
+- continuously monitors a watchlist and runs deeper analysis only when useful
 - scans a broader market universe
 - identifies interesting investment opportunities
 - produces structured forecasts and recommendations

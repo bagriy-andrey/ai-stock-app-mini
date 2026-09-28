@@ -10,17 +10,18 @@ The user can see what the system expects, how confident it is, and what the bull
 
 ## Scope
 
-- Tactical horizons: 1 day, 7 days, 30 days
-- Long-term horizons: 3 months, 6 months, 12 months, 3 years
-- Direction, probability, expected return, scenarios, confidence
+- Flexible horizons such as 1h, 1d, 3d, 7d, 30d, 90d, and 1y where appropriate
+- Direction probability, expected return, expected price where useful, price range, scenarios, and confidence
 - Structured prediction storage
 - Forecast versioning
+- Links to input snapshot, deep-analysis run, market events, and learned patterns used
 
 ## Non-Goals
 
 - Claiming exact long-term future prices
 - Outcome evaluation
 - Adaptive weighting
+- TradingAgents deep-analysis reports
 
 ## Inputs
 
@@ -28,7 +29,11 @@ The user can see what the system expects, how confident it is, and what the bull
 - Current price
 - Asset intent
 - Market context
+- Scanner signals
+- Structured market events
+- Retrieved historical patterns
 - Strategy/model versions
+- Input snapshot
 
 ## Outputs
 
@@ -44,6 +49,7 @@ The user can see what the system expects, how confident it is, and what the bull
 - ForecastScenario
 - ForecastHorizon
 - ForecastVersion
+- InputSnapshot
 
 ## Main Flows
 
@@ -70,6 +76,8 @@ The user can see what the system expects, how confident it is, and what the bull
 - Predictions are stored as structured records
 - Tactical and long-term horizons are represented distinctly
 - Forecast records include enough data for future evaluation
+- Forecasts are immutable and never overwritten
+- Forecast Engine is separate from TradingAgents / Deep Analysis
 
 ## Open Questions
 
@@ -81,4 +89,3 @@ The user can see what the system expects, how confident it is, and what the bull
 - Confidence calibration
 - Scenario visualization
 - Forecast comparison by strategy version
-

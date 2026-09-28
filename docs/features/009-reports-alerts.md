@@ -34,6 +34,7 @@ The user receives timely information about material changes without constantly c
 - Noisy low-value alerts
 - Guaranteed real-time delivery
 - Regenerating translated reports on every page view
+- Internal learning reports that calibrate models, signals, agents, or learned patterns
 
 ## Inputs
 
@@ -95,6 +96,7 @@ The user receives timely information about material changes without constantly c
 - Reports can be generated on daily, weekly, monthly, quarterly, and yearly cadence
 - Original report content is preserved
 - Translations are generated on demand and cached by report version and target language
+- User-facing reports remain separate from internal learning artifacts
 
 ## Open Questions
 
