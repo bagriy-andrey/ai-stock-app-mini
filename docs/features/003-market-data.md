@@ -36,6 +36,7 @@ The user sees current portfolio value and the AI system has reliable inputs for 
 
 Use provider interfaces so providers can be replaced, but keep the initial implementation narrow:
 
+- Frankfurter for no-key dashboard FX rates and MVP fiat conversion.
 - FMP as the initial primary provider for US stock/ETF prices, fundamentals, calendars, estimates, and financial news if the selected plan covers the required endpoints.
 - CoinGecko for crypto spot prices and history.
 - FRED/ALFRED for macroeconomic data and point-in-time macro vintages.
@@ -74,6 +75,7 @@ Deferred providers:
 - System stores price snapshots
 - System retrieves historical prices for evaluation
 - System marks stale or missing data
+- Phase 1D allows user-entered manual latest-price snapshots for owned and watched assets before durable provider ingestion is implemented
 
 ## Edge Cases
 

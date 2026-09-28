@@ -138,3 +138,65 @@ The application should support Russian and English UI language switching. This i
 ### Support multiple model and strategy comparisons
 
 Predictions, AI usage tracking, and Paper Trader workflows should support comparing different OpenRouter models, agents, and strategy configurations over time. The system should preserve enough metadata to evaluate quality, cost, latency, prediction accuracy, and paper-trading performance by model and strategy.
+
+## Phase 1 Decisions
+
+### Use average-cost positions for the portfolio MVP
+
+Phase 1 stores one average cost per active position. Tax lots, broker lots, dividend lots, and advanced performance attribution are deferred until later portfolio work.
+
+### Enforce one active position per portfolio and asset in Phase 1
+
+The MVP schema uses a unique `(portfolioId, assetId)` constraint for positions. Different intents for the same asset can be revisited later if there is a concrete workflow that needs separate lots or sub-positions.
+
+### Store platform breakdowns below aggregated positions
+
+The portfolio keeps one aggregate position per portfolio asset for Phase 1 valuation and allocation, but stores child platform holding rows for the user's exchange/brokerage breakdown. Repeated adds to the same asset and platform update both the aggregate position and the platform holding with weighted average cost. This provides visibility into where assets are held without introducing full tax-lot accounting yet.
+
+### Keep watchlist items unique by asset in Phase 1
+
+The MVP schema allows one watchlist item per asset. Watchlist groups and multiple strategy-specific watch entries are deferred.
+
+### Store multi-currency cash and convert supported MVP currencies
+
+Cash balances are stored by currency from the start. Portfolio totals are complete only when values can be represented in the portfolio base currency. Phase 1 supports USD, EUR, and PLN conversion through Frankfurter; if a required FX rate cannot be fetched, affected totals are marked incomplete.
+
+### Keep MVP portfolio quantities and cash balances non-negative
+
+Phase 1 does not support margin, short positions, negative cash, or liability modeling. Quantity, average cost, cash amount, target entry price, and market price fields use database-level non-negative checks.
+
+### Track free cash by platform and limited MVP currencies
+
+Free cash is stored by platform and currency so balances can be separated across brokerages, exchanges, and bank accounts. Phase 1 UI limits cash currency selection to USD, EUR, and PLN.
+
+### Deduct cash when adding portfolio positions
+
+Adding a real portfolio position requires an exchange/platform. The add-position flow shows the available cash for the selected exchange/platform and currency when a matching balance exists, then deducts `quantity * averageCost` from that cash balance in the same transaction that creates or increases the position. If the user enters a new exchange/platform without a matching cash balance yet, the position can still be added and no cash movement is inferred. Editing an existing position remains a manual correction workflow and does not infer cash movements.
+
+### Store portfolio activity logs for cash movements
+
+Phase 1 tracks cash deposits and withdrawals in `PortfolioActivityLog`. Cash deposits are logged when the add-cash workflow increases a balance. Cash withdrawals are logged in the same transaction that decrements the selected exchange/currency cash balance. Manual cash edits remain correction workflows and do not create movement logs. The user can manually delete activity log entries from the UI to remove noisy or mistaken history rows.
+
+### Store portfolio activity logs for manual asset trades
+
+Manual asset purchases and sales are logged in `PortfolioActivityLog` with `ASSET_BUY` and `ASSET_SELL` entries. Adding or increasing a position deducts matching platform cash when that cash balance exists and records the purchase cost. Selling a position is capped by the selected platform holding quantity, decrements both the platform holding and aggregate position, increases cash on the selected platform in the holding cost currency, and records the sale proceeds. These are manual bookkeeping actions only and do not execute real brokerage trades.
+
+### Store latest price snapshots through MarketPrice
+
+Phase 1A adds normalized market price snapshots with provider provenance. The first UI workflows may use manual or mock prices before real provider integrations are selected.
+
+### Use manual price snapshots for Phase 1D
+
+Phase 1D stores user-entered latest prices as new `MarketPrice` snapshots with provider `manual`. A manual price must be positive, uses one of the MVP currencies, and records an explicit observed timestamp. Provider profile prices shown by asset metadata lookups remain display-only until a later ingestion workflow intentionally persists external provider data.
+
+### Treat price snapshots older than 24 hours as stale in the MVP
+
+Portfolio and watchlist UI classify latest prices as missing, fresh, or stale. The MVP stale threshold is 24 hours from `observedAt`. Stale prices can still be used for valuation, but the UI surfaces the stale state instead of treating the portfolio as fully ready.
+
+### Use provider search only as an asset metadata helper in Phase 1
+
+Portfolio entry can search local assets, CoinGecko crypto metadata, and FMP stock/ETF metadata when `FMP_API_KEY` is configured. These searches populate asset fields only; they do not execute trades and they do not replace later market-price ingestion.
+
+### Use Frankfurter for MVP portfolio FX conversion
+
+Portfolio base currency is user-selectable between USD, EUR, and PLN and is persisted on the default portfolio. The MVP uses the no-key Frankfurter latest-rates API to convert supported cash balances and holdings into the selected base currency for portfolio summary calculations. If a holding has no latest market price yet, summary value falls back to average cost while keeping the portfolio status incomplete and P&L unavailable for that holding. If an FX rate cannot be fetched, affected totals are marked incomplete instead of using stale or invented rates.
