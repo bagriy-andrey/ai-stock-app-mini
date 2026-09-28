@@ -200,3 +200,35 @@ Portfolio entry can search local assets, CoinGecko crypto metadata, and FMP stoc
 ### Use Frankfurter for MVP portfolio FX conversion
 
 Portfolio base currency is user-selectable between USD, EUR, and PLN and is persisted on the default portfolio. The MVP uses the no-key Frankfurter latest-rates API to convert supported cash balances and holdings into the selected base currency for portfolio summary calculations. If a holding has no latest market price yet, summary value falls back to average cost while keeping the portfolio status incomplete and P&L unavailable for that holding. If an FX rate cannot be fetched, affected totals are marked incomplete instead of using stale or invented rates.
+
+## Phase 2 Decisions
+
+### Implement the first AI analysis layer inside the Next.js application
+
+Phase 2 starts with a TypeScript analysis orchestration layer inside the existing Next.js application. It should use TauricResearch/TradingAgents as a reference for roles and workflow, but should not copy the framework wholesale or introduce a separate Python/FastAPI service yet.
+
+The future AI service boundary should remain clean so LangGraph, TradingAgents, or a Python worker service can be introduced later if orchestration complexity, latency, or dependency requirements justify it.
+
+### Keep initial agents code-defined and versioned
+
+Initial AI agents are defined in code and versioned with the repository. Phase 2 does not add a UI for unrestricted custom agent creation.
+
+Later phases may add UI-configurable agent profiles, model assignments, risk modes, and paper-trading strategy settings. Stable agent identities and prompt/schema versions are required so analysis quality, costs, and future outcomes can be compared over time.
+
+### Treat adaptive learning as calibration, not self-modifying code
+
+Future learning workflows may adjust agent weights, confidence calibration, model-tier recommendations, and strategy configuration suggestions based on measured outcomes.
+
+The system should not autonomously rewrite agent code, prompt contracts, or output schemas without explicit user review.
+
+### Store Phase 2 AI output as analysis reports, not forecast records
+
+Phase 2 persists manually triggered analysis reports and compact agent reasoning summaries. These reports may contain directional opinions, scenarios, and advisory recommendations, but they are not normalized predictions eligible for outcome evaluation.
+
+Structured forecast records with horizons, probabilities, versioning, and future resolution belong to the Forecast Engine phase.
+
+### Preserve point-in-time analysis context
+
+Each AI analysis run should store an input snapshot containing the asset, market price freshness, portfolio/watchlist context, selected intent, provider provenance, and missing-data warnings visible to the agents at the time of analysis.
+
+This keeps manual analysis reviewable and prepares the system for later forecast evaluation and learning without data leakage.
