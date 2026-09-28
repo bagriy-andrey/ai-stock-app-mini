@@ -75,6 +75,7 @@ Deferred providers:
 - System stores price snapshots
 - System retrieves historical prices for evaluation
 - System marks stale or missing data
+- Phase 1D allows user-entered manual latest-price snapshots for owned and watched assets before durable provider ingestion is implemented
 
 ## Edge Cases
 

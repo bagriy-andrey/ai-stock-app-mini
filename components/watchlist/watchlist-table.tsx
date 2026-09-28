@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { ManualPriceFormModal } from "@/components/market-data/manual-price-form-modal";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
 import {
   PositionPlatformHoldingsModal,
   type PortfolioPosition,
 } from "@/components/portfolio/portfolio-tables-tabs";
+import {
+  getPriceFreshness,
+  type PriceFreshness,
+} from "@/lib/market-data/price-freshness";
 import { WatchlistItemFormModal } from "@/components/watchlist/watchlist-item-form-modal";
 import type { WatchlistItemSummary } from "@/lib/watchlist/repository";
 
@@ -78,6 +83,7 @@ export function WatchlistTable({
   portfolioPositions,
   createPositionAction,
   sellPositionAction,
+  updatePriceAction,
 }: {
   items: WatchlistItemSummary[];
   createAction: (formData: FormData) => Promise<void>;
@@ -89,6 +95,7 @@ export function WatchlistTable({
   portfolioPositions: PortfolioPosition[];
   createPositionAction: (formData: FormData) => Promise<void>;
   sellPositionAction: (formData: FormData) => Promise<void>;
+  updatePriceAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, selectActiveTab] = useStoredWatchlistTab();
   const [selectedItem, setSelectedItem] = useState<WatchlistItemSummary | null>(
@@ -99,6 +106,7 @@ export function WatchlistTable({
   );
   const [positionToSell, setPositionToSell] =
     useState<PortfolioPosition | null>(null);
+  const [priceItem, setPriceItem] = useState<WatchlistItemSummary | null>(null);
   const stocks = useMemo(
     () => items.filter((item) => item.assetType !== "CRYPTO"),
     [items],
@@ -171,6 +179,7 @@ export function WatchlistTable({
               item={item}
               key={item.id}
               onOpen={setSelectedItem}
+              onUpdatePrice={setPriceItem}
             />
           ))}
         </div>
@@ -233,6 +242,26 @@ export function WatchlistTable({
           showTrigger={false}
         />
       ) : null}
+
+      {priceItem ? (
+        <ManualPriceFormModal
+          action={updatePriceAction}
+          asset={{
+            assetId: priceItem.assetId,
+            assetCurrency: priceItem.assetCurrency,
+            latestPrice: priceItem.latestPrice,
+            name: priceItem.name,
+            symbol: priceItem.symbol,
+          }}
+          isOpen
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setPriceItem(null);
+            }
+          }}
+          showTrigger={false}
+        />
+      ) : null}
     </section>
   );
 }
@@ -255,10 +284,12 @@ function WatchlistWidget({
   item,
   deleteAction,
   onOpen,
+  onUpdatePrice,
 }: {
   item: WatchlistItemSummary;
   deleteAction: (formData: FormData) => Promise<void>;
   onOpen: (item: WatchlistItemSummary) => void;
+  onUpdatePrice: (item: WatchlistItemSummary) => void;
 }) {
   return (
     <div
@@ -303,7 +334,19 @@ function WatchlistWidget({
       </div>
 
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase text-zinc-500">Price</p>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <p className="text-xs font-medium uppercase text-zinc-500">Price</p>
+          <button
+            className="rounded border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+            onClick={(event) => {
+              event.stopPropagation();
+              onUpdatePrice(item);
+            }}
+            type="button"
+          >
+            Update
+          </button>
+        </div>
         <WatchlistWidgetPrice item={item} />
       </div>
 
@@ -370,14 +413,19 @@ function WatchlistWidgetPrice({ item }: { item: WatchlistItemSummary }) {
   ]);
 
   if (item.latestPrice) {
+    const freshness = getPriceFreshness(item.latestPrice);
+
     return (
       <>
         <p className="mt-1 min-w-0 truncate text-2xl font-semibold text-zinc-950">
           {formatMoney(item.latestPrice.price, item.latestPrice.currency)}
         </p>
-        <p className="mt-1 min-w-0 truncate text-xs text-zinc-500">
-          {formatDate(item.latestPrice.observedAt)}
-        </p>
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+          <p className="min-w-0 truncate text-xs text-zinc-500">
+            {formatDate(item.latestPrice.observedAt)}
+          </p>
+          <PriceFreshnessBadge freshness={freshness} />
+        </div>
       </>
     );
   }
@@ -410,6 +458,23 @@ function WatchlistWidgetPrice({ item }: { item: WatchlistItemSummary }) {
         </>
       )}
     </>
+  );
+}
+
+function PriceFreshnessBadge({ freshness }: { freshness: PriceFreshness }) {
+  const className =
+    freshness === "fresh"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : freshness === "stale"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-zinc-200 bg-zinc-50 text-zinc-600";
+
+  return (
+    <span
+      className={`w-fit rounded border px-2 py-0.5 text-[11px] font-medium uppercase ${className}`}
+    >
+      {freshness}
+    </span>
   );
 }
 

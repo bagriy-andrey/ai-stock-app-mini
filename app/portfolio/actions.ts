@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { PortfolioActivityType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { createManualPriceSnapshot } from "@/lib/market-data/prices";
 import {
   calculatePurchaseCost,
   calculateWeightedAverageCost,
@@ -17,6 +18,7 @@ import {
   cashBalanceDeleteFormSchema,
   cashBalanceFormSchema,
   cashWithdrawalFormSchema,
+  manualPriceFormSchema,
   portfolioBaseCurrencyFormSchema,
   portfolioExchangeFormSchema,
   positionDeleteFormSchema,
@@ -26,6 +28,7 @@ import {
 } from "@/lib/portfolio/validation";
 
 const PORTFOLIO_PATH = "/portfolio";
+const WATCHLIST_PATH = "/watchlist";
 
 export async function createPosition(formData: FormData) {
   const input = positionFormSchema.parse(Object.fromEntries(formData));
@@ -585,6 +588,16 @@ export async function createPortfolioExchange(formData: FormData) {
   });
 
   revalidatePath(PORTFOLIO_PATH);
+}
+
+export async function createManualPrice(formData: FormData) {
+  const input = manualPriceFormSchema.parse(Object.fromEntries(formData));
+
+  await createManualPriceSnapshot(input);
+
+  revalidatePath(PORTFOLIO_PATH);
+  revalidatePath(WATCHLIST_PATH);
+  revalidatePath("/");
 }
 
 async function createPortfolioActivityLog(

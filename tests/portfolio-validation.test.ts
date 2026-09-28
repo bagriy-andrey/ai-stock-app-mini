@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   cashBalanceFormSchema,
   cashWithdrawalFormSchema,
+  manualPriceFormSchema,
   portfolioExchangeFormSchema,
   positionFormSchema,
 } from "@/lib/portfolio/validation";
@@ -195,6 +196,39 @@ describe("portfolio form validation", () => {
       portfolioExchangeFormSchema.parse({
         name: "IBKR",
         type: "BROKER",
+      }),
+    ).toThrow();
+  });
+
+  it("validates manual price snapshots", () => {
+    expect(
+      manualPriceFormSchema.parse({
+        assetId: "asset-1",
+        price: "125.50",
+        currency: " usd ",
+        observedAt: "2026-09-28T10:30",
+      }),
+    ).toMatchObject({
+      assetId: "asset-1",
+      price: 125.5,
+      currency: "USD",
+    });
+
+    expect(() =>
+      manualPriceFormSchema.parse({
+        assetId: "asset-1",
+        price: "0",
+        currency: "USD",
+        observedAt: "2026-09-28T10:30",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      manualPriceFormSchema.parse({
+        assetId: "",
+        price: "10",
+        currency: "USD",
+        observedAt: "2026-09-28T10:30",
       }),
     ).toThrow();
   });

@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { AssetType, InvestmentIntent } from "@prisma/client";
+import { ManualPriceFormModal } from "@/components/market-data/manual-price-form-modal";
 import { ConfirmDeleteButton } from "@/components/portfolio/confirm-delete-button";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
 
 type PositionActionValue = {
   id: string;
+  assetId: string;
   symbol: string;
   name: string;
   assetType: AssetType;
@@ -56,6 +58,7 @@ export function PositionActionsMenu({
   createAction,
   deleteAction,
   sellAction,
+  updatePriceAction,
 }: {
   position: PositionActionValue;
   baseCurrency: string;
@@ -65,11 +68,13 @@ export function PositionActionsMenu({
   createAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
   sellAction: (formData: FormData) => Promise<void>;
+  updatePriceAction: (formData: FormData) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isBuyOpen, setIsBuyOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
+  const [isPriceOpen, setIsPriceOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
     right: number;
@@ -174,6 +179,16 @@ export function PositionActionsMenu({
           <button
             className="h-9 w-full rounded px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
             onClick={() => {
+              setIsPriceOpen(true);
+              setIsOpen(false);
+            }}
+            type="button"
+          >
+            Update price
+          </button>
+          <button
+            className="h-9 w-full rounded px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            onClick={() => {
               setIsBuyOpen(true);
               setIsOpen(false);
             }}
@@ -224,6 +239,13 @@ export function PositionActionsMenu({
         isOpen={isBuyOpen}
         mode="create"
         onOpenChange={setIsBuyOpen}
+        showTrigger={false}
+      />
+      <ManualPriceFormModal
+        action={updatePriceAction}
+        asset={position}
+        isOpen={isPriceOpen}
+        onOpenChange={setIsPriceOpen}
         showTrigger={false}
       />
       <ConfirmDeleteButton

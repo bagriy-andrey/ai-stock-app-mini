@@ -99,6 +99,13 @@ export const portfolioExchangeFormSchema = z.object({
   type: z.enum(portfolioExchangeTypes),
 });
 
+export const manualPriceFormSchema = z.object({
+  assetId: z.string().min(1),
+  price: positiveNumberSchema,
+  currency: supportedCurrencySchema,
+  observedAt: z.coerce.date(),
+});
+
 export type PositionFormInput = z.infer<typeof positionFormSchema>;
 export type PositionUpdateFormInput = z.infer<typeof positionUpdateFormSchema>;
 export type PositionSellFormInput = z.infer<typeof positionSellFormSchema>;
@@ -107,3 +114,4 @@ export type CashWithdrawalFormInput = z.infer<typeof cashWithdrawalFormSchema>;
 export type PortfolioExchangeFormInput = z.infer<
   typeof portfolioExchangeFormSchema
 >;
+export type ManualPriceFormInput = z.infer<typeof manualPriceFormSchema>;

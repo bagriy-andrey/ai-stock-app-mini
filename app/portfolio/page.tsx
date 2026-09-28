@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  createManualPrice,
   createPortfolioExchange,
   createPosition,
   deleteActivityLog,
@@ -14,6 +15,7 @@ import {
 import { BaseCurrencySelect } from "@/components/portfolio/base-currency-select";
 import { ExchangeFormModal } from "@/components/portfolio/exchange-form-modal";
 import { PortfolioTablesTabs } from "@/components/portfolio/portfolio-tables-tabs";
+import { getPriceFreshness } from "@/lib/market-data/price-freshness";
 import { getPortfolioSummary } from "@/lib/portfolio/repository";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,10 @@ export default async function PortfolioPage() {
   } catch (error) {
     return <PortfolioSetupState error={error} />;
   }
+
+  const stalePriceCount = portfolio.positions.filter(
+    (position) => getPriceFreshness(position.latestPrice) === "stale",
+  ).length;
 
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
@@ -90,11 +96,19 @@ export default async function PortfolioPage() {
           />
           <SummaryMetric
             label="Data status"
-            value={portfolio.valuation.isComplete ? "Ready" : "Incomplete"}
+            value={
+              portfolio.valuation.isComplete && stalePriceCount === 0
+                ? "Ready"
+                : stalePriceCount > 0
+                  ? "Stale"
+                  : "Incomplete"
+            }
             detail={
               portfolio.valuation.hasMissingPrices
                 ? "Some assets have no market price; cost basis is used as a fallback."
-                : portfolio.valuation.hasUnsupportedCurrencies
+                : stalePriceCount > 0
+                  ? `${stalePriceCount} price snapshots are older than 24 hours.`
+                  : portfolio.valuation.hasUnsupportedCurrencies
                   ? "FX rate is missing for one or more currencies."
                   : "Prices and FX rates are available for valuation."
             }
@@ -113,6 +127,7 @@ export default async function PortfolioPage() {
           sellPositionAction={sellPosition}
           positions={portfolio.positions}
           upsertCashBalanceAction={upsertCashBalance}
+          updatePriceAction={createManualPrice}
           updatePositionAction={updatePosition}
           valuationCashBalances={portfolio.valuation.cashBalances}
           valuationPositions={portfolio.valuation.positions}

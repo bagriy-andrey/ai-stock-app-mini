@@ -7,6 +7,10 @@ import type {
   InvestmentIntent,
   PortfolioActivityType,
 } from "@prisma/client";
+import {
+  getPriceFreshness,
+  type PriceFreshness,
+} from "@/lib/market-data/price-freshness";
 import { CashActionsMenu } from "@/components/portfolio/cash-actions-menu";
 import { CashFormModal } from "@/components/portfolio/cash-form-modal";
 import { PositionActionsMenu } from "@/components/portfolio/position-actions-menu";
@@ -158,6 +162,7 @@ export function PortfolioTablesTabs({
   withdrawCashBalanceAction,
   deleteCashBalanceAction,
   deleteActivityLogAction,
+  updatePriceAction,
 }: {
   positions: PortfolioPosition[];
   valuationPositions: PositionValuation[];
@@ -174,6 +179,7 @@ export function PortfolioTablesTabs({
   withdrawCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteActivityLogAction: (formData: FormData) => Promise<void>;
+  updatePriceAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, selectActiveTab] = useStoredTab(
     portfolioActiveTabStorageKey,
@@ -246,6 +252,7 @@ export function PortfolioTablesTabs({
           title="Crypto"
           updateAction={updatePositionAction}
           sellAction={sellPositionAction}
+          updatePriceAction={updatePriceAction}
           valuationPositions={valuationPositions}
         />
       )}
@@ -275,6 +282,7 @@ export function PortfolioTablesTabs({
           title="Stocks & ETF"
           updateAction={updatePositionAction}
           sellAction={sellPositionAction}
+          updatePriceAction={updatePriceAction}
           valuationPositions={valuationPositions}
         />
       )}
@@ -398,6 +406,7 @@ function PositionsTable({
   deleteAction,
   sellAction,
   createAction,
+  updatePriceAction,
   activityLogs,
 }: {
   title: string;
@@ -412,6 +421,7 @@ function PositionsTable({
   deleteAction: (formData: FormData) => Promise<void>;
   sellAction: (formData: FormData) => Promise<void>;
   createAction: (formData: FormData) => Promise<void>;
+  updatePriceAction: (formData: FormData) => Promise<void>;
   activityLogs: PortfolioActivityLog[];
 }) {
   const [selectedPosition, setSelectedPosition] =
@@ -490,12 +500,7 @@ function PositionsTable({
                       {formatMoney(position.averageCost, position.costCurrency)}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      {position.latestPrice
-                        ? formatMoney(
-                            position.latestPrice.price,
-                            position.latestPrice.currency,
-                          )
-                        : "Missing"}
+                      <PriceCell latestPrice={position.latestPrice} />
                     </td>
                     <td className="px-4 py-3 align-top">
                       {formatMaybeMoney(
@@ -533,6 +538,7 @@ function PositionsTable({
                         exchangeOptions={exchangeOptions}
                         position={position}
                         sellAction={sellAction}
+                        updatePriceAction={updatePriceAction}
                         updateAction={updateAction}
                       />
                     </td>
@@ -584,6 +590,50 @@ function PositionsTable({
         />
       ) : null}
     </section>
+  );
+}
+
+function PriceCell({
+  latestPrice,
+}: {
+  latestPrice: PortfolioPosition["latestPrice"];
+}) {
+  const freshness = getPriceFreshness(latestPrice);
+
+  if (!latestPrice) {
+    return (
+      <div className="grid gap-1">
+        <span>Missing</span>
+        <PriceFreshnessBadge freshness={freshness} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-1">
+      <span>{formatMoney(latestPrice.price, latestPrice.currency)}</span>
+      <span className="text-xs text-zinc-500">
+        {formatDisplayDateTime(latestPrice.observedAt)}
+      </span>
+      <PriceFreshnessBadge freshness={freshness} />
+    </div>
+  );
+}
+
+function PriceFreshnessBadge({ freshness }: { freshness: PriceFreshness }) {
+  const className =
+    freshness === "fresh"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : freshness === "stale"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-zinc-200 bg-zinc-50 text-zinc-600";
+
+  return (
+    <span
+      className={`w-fit rounded border px-2 py-0.5 text-[11px] font-medium uppercase ${className}`}
+    >
+      {freshness}
+    </span>
   );
 }
 

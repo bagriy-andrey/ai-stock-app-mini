@@ -185,6 +185,14 @@ Manual asset purchases and sales are logged in `PortfolioActivityLog` with `ASSE
 
 Phase 1A adds normalized market price snapshots with provider provenance. The first UI workflows may use manual or mock prices before real provider integrations are selected.
 
+### Use manual price snapshots for Phase 1D
+
+Phase 1D stores user-entered latest prices as new `MarketPrice` snapshots with provider `manual`. A manual price must be positive, uses one of the MVP currencies, and records an explicit observed timestamp. Provider profile prices shown by asset metadata lookups remain display-only until a later ingestion workflow intentionally persists external provider data.
+
+### Treat price snapshots older than 24 hours as stale in the MVP
+
+Portfolio and watchlist UI classify latest prices as missing, fresh, or stale. The MVP stale threshold is 24 hours from `observedAt`. Stale prices can still be used for valuation, but the UI surfaces the stale state instead of treating the portfolio as fully ready.
+
 ### Use provider search only as an asset metadata helper in Phase 1
 
 Portfolio entry can search local assets, CoinGecko crypto metadata, and FMP stock/ETF metadata when `FMP_API_KEY` is configured. These searches populate asset fields only; they do not execute trades and they do not replace later market-price ingestion.
