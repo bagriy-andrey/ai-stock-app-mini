@@ -22,11 +22,18 @@ type AssetProfilePrice = {
   priceCurrency: string;
 };
 
+type AssetProfilePriceCacheEntry = {
+  expiresAt: number;
+  request: Promise<AssetProfilePrice | null>;
+};
+
 const tabs: Array<{ id: WatchlistTab; label: string }> = [
   { id: "STOCKS", label: "Stocks" },
   { id: "CRYPTO", label: "Crypto" },
 ];
 const watchlistActiveTabStorageKey = "watchlist.activeTab";
+const assetProfilePriceCacheTtlMs = 30 * 1000;
+const assetProfilePriceCache = new Map<string, AssetProfilePriceCacheEntry>();
 
 type CashBalance = {
   id: string;
@@ -369,29 +376,35 @@ function WatchlistWidgetPrice({ item }: { item: WatchlistItemSummary }) {
     null,
   );
   const [isLoading, setIsLoading] = useState(!item.latestPrice);
+  const {
+    assetType,
+    latestPrice,
+    name,
+    provider,
+    providerSymbol,
+    symbol,
+  } = item;
 
   useEffect(() => {
-    if (item.latestPrice) {
+    if (latestPrice) {
       return;
     }
 
     let isActive = true;
-    const params = new URLSearchParams({
-      name: item.name,
-      provider: item.provider,
-      providerSymbol: item.providerSymbol,
-      symbol: item.symbol,
-      type: item.assetType,
-    });
 
-    fetch(`/api/assets/profile?${params}`)
-      .then((response) => (response.ok ? response.json() : { profile: null }))
-      .then((data: { profile?: AssetProfilePrice | null }) => {
+    fetchCachedAssetProfilePrice({
+      assetType,
+      name,
+      provider,
+      providerSymbol,
+      symbol,
+    })
+      .then((price) => {
         if (!isActive) {
           return;
         }
 
-        setProfilePrice(data.profile ?? null);
+        setProfilePrice(price);
         setIsLoading(false);
       })
       .catch(() => {
@@ -403,14 +416,7 @@ function WatchlistWidgetPrice({ item }: { item: WatchlistItemSummary }) {
     return () => {
       isActive = false;
     };
-  }, [
-    item.assetType,
-    item.latestPrice,
-    item.name,
-    item.provider,
-    item.providerSymbol,
-    item.symbol,
-  ]);
+  }, [assetType, latestPrice, name, provider, providerSymbol, symbol]);
 
   if (item.latestPrice) {
     const freshness = getPriceFreshness(item.latestPrice);
@@ -459,6 +465,50 @@ function WatchlistWidgetPrice({ item }: { item: WatchlistItemSummary }) {
       )}
     </>
   );
+}
+
+function fetchCachedAssetProfilePrice(
+  item: Pick<
+    WatchlistItemSummary,
+    "assetType" | "name" | "provider" | "providerSymbol" | "symbol"
+  >,
+): Promise<AssetProfilePrice | null> {
+  const cacheKey = [
+    item.provider.toLowerCase(),
+    item.providerSymbol.toUpperCase(),
+    item.symbol.toUpperCase(),
+    item.name.toLowerCase(),
+    item.assetType,
+  ].join(":");
+  const cached = assetProfilePriceCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    return cached.request;
+  }
+
+  const params = new URLSearchParams({
+    name: item.name,
+    provider: item.provider,
+    providerSymbol: item.providerSymbol,
+    scope: "price",
+    symbol: item.symbol,
+    type: item.assetType,
+  });
+  const request = fetch(`/api/assets/profile?${params}`)
+    .then((response) => (response.ok ? response.json() : { profile: null }))
+    .then((data: { profile?: AssetProfilePrice | null }) => data.profile ?? null)
+    .catch((error) => {
+      assetProfilePriceCache.delete(cacheKey);
+      throw error;
+    });
+
+  assetProfilePriceCache.set(cacheKey, {
+    expiresAt: now + assetProfilePriceCacheTtlMs,
+    request,
+  });
+
+  return request;
 }
 
 function PriceFreshnessBadge({ freshness }: { freshness: PriceFreshness }) {

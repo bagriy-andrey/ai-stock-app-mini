@@ -10,7 +10,18 @@ const searchParamsSchema = z.object({
   symbol: z.string().trim().min(1).max(24),
   name: z.string().trim().min(1).max(120),
   type: z.nativeEnum(AssetType),
+  scope: z.enum(["profile", "price"]).optional().default("profile"),
 });
+
+const PROFILE_CACHE_TTL_MS = 30 * 1000;
+const profileCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    profile: AssetProfile | null;
+  }
+>();
+const profileRequests = new Map<string, Promise<AssetProfile | null>>();
 
 type AssetProfile = {
   source: string;
@@ -131,15 +142,74 @@ export async function GET(request: Request) {
     symbol: url.searchParams.get("symbol"),
     name: url.searchParams.get("name"),
     type: url.searchParams.get("type"),
+    scope: url.searchParams.get("scope") ?? undefined,
   });
 
   if (!parsed.success) {
     return NextResponse.json({ profile: null }, { status: 400 });
   }
 
-  const profile = await getProviderProfile(parsed.data);
+  const profile = await getCachedProviderProfile(parsed.data);
 
   return NextResponse.json({ profile });
+}
+
+async function getCachedProviderProfile(input: {
+  provider: string;
+  providerSymbol: string;
+  symbol: string;
+  name: string;
+  type: AssetType;
+  scope: "profile" | "price";
+}): Promise<AssetProfile | null> {
+  const cacheKey = getProfileCacheKey(input);
+  const cached = profileCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    return cached.profile;
+  }
+
+  const existingRequest = profileRequests.get(cacheKey);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = getProviderProfile(input)
+    .then((profile) => {
+      profileCache.set(cacheKey, {
+        expiresAt: Date.now() + PROFILE_CACHE_TTL_MS,
+        profile,
+      });
+
+      return profile;
+    })
+    .finally(() => {
+      profileRequests.delete(cacheKey);
+    });
+
+  profileRequests.set(cacheKey, request);
+
+  return request;
+}
+
+function getProfileCacheKey(input: {
+  provider: string;
+  providerSymbol: string;
+  symbol: string;
+  name: string;
+  type: AssetType;
+  scope: "profile" | "price";
+}) {
+  return [
+    input.provider.toLowerCase(),
+    input.providerSymbol.toUpperCase(),
+    input.symbol.toUpperCase(),
+    input.name.toLowerCase(),
+    input.type,
+    input.scope,
+  ].join(":");
 }
 
 async function getProviderProfile(input: {
@@ -148,6 +218,7 @@ async function getProviderProfile(input: {
   symbol: string;
   name: string;
   type: AssetType;
+  scope: "profile" | "price";
 }): Promise<AssetProfile | null> {
   if (input.type === AssetType.CRYPTO) {
     const candidateCoinIds = await getCoinGeckoCandidateIds(input);
@@ -164,7 +235,7 @@ async function getProviderProfile(input: {
   }
 
   return (
-    (await getFmpProfile(input.providerSymbol || input.symbol)) ??
+    (await getFmpProfile(input.providerSymbol || input.symbol, input.scope)) ??
     getLocalFallbackProfile(input)
   );
 }
@@ -351,7 +422,10 @@ async function getCoinGeckoProfile(
   }
 }
 
-async function getFmpProfile(symbol: string): Promise<AssetProfile | null> {
+async function getFmpProfile(
+  symbol: string,
+  scope: "profile" | "price",
+): Promise<AssetProfile | null> {
   const apiKey = process.env.FMP_API_KEY;
 
   if (!apiKey) {
@@ -360,7 +434,7 @@ async function getFmpProfile(symbol: string): Promise<AssetProfile | null> {
 
   try {
     const [profileResponse, quoteResponse] = await Promise.all([
-      fetchFmpProfile(symbol, apiKey),
+      scope === "profile" ? fetchFmpProfile(symbol, apiKey) : null,
       fetchFmpQuote(symbol, apiKey),
     ]);
 
