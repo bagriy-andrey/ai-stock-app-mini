@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateModelUsageCost,
   estimateModelCallCost,
   formatPricePerMillionTokens,
   formatUsd,
@@ -25,5 +26,17 @@ describe("OpenRouter model pricing helpers", () => {
 
   it("formats tiny estimated costs without rounding to zero", () => {
     expect(formatUsd(0.00001)).toBe("<$0.0001");
+  });
+
+  it("calculates actual usage cost from recorded tokens", () => {
+    expect(
+      calculateModelUsageCost({
+        promptPrice: "0.000001",
+        completionPrice: "0.000002",
+        requestPrice: "0",
+        inputTokens: 1000,
+        outputTokens: 500,
+      }),
+    ).toBeCloseTo(0.002);
   });
 });

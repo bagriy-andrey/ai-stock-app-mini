@@ -11,6 +11,8 @@ import {
   updateWatchlistItem,
 } from "@/app/watchlist/actions";
 import { WatchlistTable } from "@/components/watchlist/watchlist-table";
+import { ToastViewport } from "@/components/ui/toast";
+import { Tooltip } from "@/components/ui/tooltip";
 import { getPortfolioSummary } from "@/lib/portfolio/repository";
 import { getWatchlistSummary } from "@/lib/watchlist/repository";
 
@@ -48,14 +50,15 @@ export default async function WatchlistPage() {
               Manual asset monitoring, separate from owned portfolio positions.
             </p>
           </div>
-          <Link
-            aria-label="Exit to home"
-            className="grid size-9 place-items-center rounded border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
-            href="/"
-            title="Exit to home"
-          >
-            <HomeIcon />
-          </Link>
+          <Tooltip label="Home">
+            <Link
+              aria-label="Exit to home"
+              className="grid size-9 place-items-center rounded border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
+              href="/"
+            >
+              <HomeIcon />
+            </Link>
+          </Tooltip>
         </header>
 
         <section className="grid gap-3 md:grid-cols-4">
@@ -95,6 +98,7 @@ export default async function WatchlistPage() {
           updateAction={updateWatchlistItem}
           updatePriceAction={createManualPrice}
         />
+        <ToastViewport />
       </div>
     </main>
   );

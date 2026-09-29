@@ -63,3 +63,45 @@ Do not record generic progress logs. Record only insights that should help futur
 - Context: Prisma migrations were attempted during Phase 2 work.
 - Insight: The local PostgreSQL database may be unavailable at `localhost:5432`, causing `P1001`. Code, schema, and migration files can still be completed and verified with lint/typecheck/tests/build, but UI pages that query new tables require `npm run prisma:migrate` after Postgres is running.
 - Files: `prisma/migrations/`, `prisma/schema.prisma`.
+
+## 2026-09-28 - Analysis Actions and Toasts
+
+- Context: AI analysis actions needed icon-only controls, start/completion notifications, and refresh from history/detail pages.
+- Insight: Use `AnalysisIconForm` and `RefreshAnalysisForm` for analysis-related icon buttons so start toasts, tooltips, hidden form fields, and icon styling stay consistent. Completion toasts are driven by `analysisToast` query params after server actions redirect to the new run detail page.
+- Files: `components/analysis/analysis-action-button.tsx`, `components/analysis/analysis-toast-on-load.tsx`, `components/ui/toast.tsx`, `app/analysis/actions.ts`.
+
+## 2026-09-28 - Analysis Page UI Conventions
+
+- Context: Deep Analysis history/detail pages were tightened after MVP implementation.
+- Insight: Header navigation should use icon-only Home buttons. History rows should make all non-action cells clickable. Model tiers are visually encoded as cheap=red, standard=amber, strong=emerald, and detail widgets should expose compact native-title `i` tooltips for field meaning.
+- Files: `app/analysis/page.tsx`, `app/analysis/[id]/page.tsx`.
+
+## 2026-09-28 - Active Analysis UI State
+
+- Context: AI analysis buttons must not start duplicate runs while a previous run is active.
+- Insight: Portfolio and watchlist repositories attach `hasActiveAnalysis` from `AgentRun` rows with `PENDING` or `RUNNING` status. UI buttons should consume that flag and disable submit buttons. Analysis history/detail pages use `AnalysisAutoRefresh` to refresh server data while active runs exist.
+- Files: `lib/portfolio/repository.ts`, `lib/watchlist/repository.ts`, `components/analysis/analysis-auto-refresh.tsx`.
+
+## 2026-09-28 - Tooltip and AI Cost UI
+
+- Context: Native tooltips were inconsistent and table tooltips were clipped; analysis cost showed `N/A`.
+- Insight: Use the shared `Tooltip` component for app tooltips. It renders through a fixed-position portal so table/card overflow does not clip it. New AI usage records calculate `cost` from actual token counts and OpenRouter prompt/completion pricing when pricing metadata is available; old runs without stored cost remain `N/A`.
+- Files: `components/ui/tooltip.tsx`, `lib/analysis/orchestrator.ts`, `lib/model-router/pricing.ts`.
+
+## 2026-09-28 - Tooltip Rule and Refresh Control
+
+- Context: Refresh buttons and tooltip behavior needed repeated correction.
+- Insight: All new user-facing tooltips must use `components/ui/tooltip.tsx`, not native `title`. Refresh actions use `RefreshAnalysisForm`; pass `size="header"` for report header controls and keep compact size for table rows.
+- Files: `AGENTS.md`, `components/analysis/analysis-action-button.tsx`, `app/analysis/[id]/page.tsx`.
+
+## 2026-09-28 - Completion Toast Timing
+
+- Context: Analysis completion toasts were not visible after server-action redirects.
+- Insight: Do not rely on a separate page-load component dispatching a toast event before `ToastViewport` subscribes. For redirect-driven completion messages, pass `initialToast` directly into `ToastViewport`.
+- Files: `components/ui/toast.tsx`, `app/analysis/[id]/page.tsx`.
+
+## 2026-09-29 - Analysis JSON Fallbacks
+
+- Context: Deep Analysis runs could fail after successful model calls when the final model returned malformed JSON.
+- Insight: Analysis orchestration should request OpenRouter JSON mode and still defensively fallback when parsing/schema validation fails. Malformed agent output should produce a low-confidence fallback summary/report with a warning instead of failing the whole run.
+- Files: `lib/analysis/orchestrator.ts`, `lib/analysis/json.ts`, `lib/model-router/types.ts`.

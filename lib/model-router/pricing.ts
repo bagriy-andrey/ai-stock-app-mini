@@ -27,6 +27,36 @@ export function estimateModelCallCost(model: Pick<OpenRouterModel, "pricing">): 
   );
 }
 
+export function calculateModelUsageCost(input: {
+  completionPrice: string | null | undefined;
+  inputTokens: number | null | undefined;
+  outputTokens: number | null | undefined;
+  promptPrice: string | null | undefined;
+  requestPrice?: string | null | undefined;
+}): number | null {
+  if (input.inputTokens === undefined || input.outputTokens === undefined) {
+    return null;
+  }
+
+  if (input.inputTokens === null || input.outputTokens === null) {
+    return null;
+  }
+
+  const promptPrice = parseTokenPrice(input.promptPrice);
+  const completionPrice = parseTokenPrice(input.completionPrice);
+  const requestPrice = parseTokenPrice(input.requestPrice) ?? 0;
+
+  if (promptPrice === null || completionPrice === null) {
+    return null;
+  }
+
+  return (
+    requestPrice +
+    promptPrice * input.inputTokens +
+    completionPrice * input.outputTokens
+  );
+}
+
 export function formatUsd(value: number): string {
   if (value === 0) {
     return "$0.0000";

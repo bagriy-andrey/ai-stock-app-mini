@@ -33,6 +33,7 @@ export type WatchlistItemSummary = {
     currency: string;
     observedAt: Date;
   } | null;
+  hasActiveAnalysis: boolean;
 };
 
 export async function getWatchlistSummary(): Promise<WatchlistSummary> {
@@ -65,8 +66,16 @@ export async function getWatchlistSummary(): Promise<WatchlistSummary> {
     },
   });
 
+  const summaries = items.map(toWatchlistItemSummary);
+  const activeAnalysisAssetIds = await getActiveAnalysisAssetIds(
+    summaries.map((item) => item.assetId),
+  );
+
   return {
-    items: items.map(toWatchlistItemSummary),
+    items: summaries.map((item) => ({
+      ...item,
+      hasActiveAnalysis: activeAnalysisAssetIds.has(item.assetId),
+    })),
   };
 }
 
@@ -110,5 +119,28 @@ function toWatchlistItemSummary(
           observedAt: latestPrice.observedAt,
         }
       : null,
+    hasActiveAnalysis: false,
   };
+}
+
+async function getActiveAnalysisAssetIds(assetIds: string[]): Promise<Set<string>> {
+  if (assetIds.length === 0) {
+    return new Set();
+  }
+
+  const runs = await prisma.agentRun.findMany({
+    where: {
+      assetId: {
+        in: assetIds,
+      },
+      status: {
+        in: ["PENDING", "RUNNING"],
+      },
+    },
+    select: {
+      assetId: true,
+    },
+  });
+
+  return new Set(runs.map((run) => run.assetId));
 }

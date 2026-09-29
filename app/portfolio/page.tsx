@@ -16,6 +16,8 @@ import {
 import { BaseCurrencySelect } from "@/components/portfolio/base-currency-select";
 import { ExchangeFormModal } from "@/components/portfolio/exchange-form-modal";
 import { PortfolioTablesTabs } from "@/components/portfolio/portfolio-tables-tabs";
+import { ToastViewport } from "@/components/ui/toast";
+import { Tooltip } from "@/components/ui/tooltip";
 import { getPriceFreshness } from "@/lib/market-data/price-freshness";
 import { getPortfolioSummary } from "@/lib/portfolio/repository";
 
@@ -55,14 +57,15 @@ export default async function PortfolioPage() {
               baseCurrency={portfolio.baseCurrency}
             />
             <ExchangeFormModal action={createPortfolioExchange} />
-            <Link
-              aria-label="Exit to home"
-              className="grid size-9 place-items-center rounded border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
-              href="/"
-              title="Exit to home"
-            >
-              <HomeIcon />
-            </Link>
+            <Tooltip label="Home">
+              <Link
+                aria-label="Exit to home"
+                className="grid size-9 place-items-center rounded border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
+                href="/"
+              >
+                <HomeIcon />
+              </Link>
+            </Tooltip>
           </div>
         </header>
 
@@ -135,6 +138,7 @@ export default async function PortfolioPage() {
           valuationPositions={portfolio.valuation.positions}
           withdrawCashBalanceAction={withdrawCashBalance}
         />
+        <ToastViewport />
       </div>
     </main>
   );

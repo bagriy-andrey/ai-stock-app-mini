@@ -1,4 +1,10 @@
 import Link from "next/link";
+import { restartAnalysis } from "@/app/analysis/actions";
+import { AnalysisAutoRefresh } from "@/components/analysis/analysis-auto-refresh";
+import { RefreshAnalysisForm } from "@/components/analysis/analysis-action-button";
+import { HomeIcon } from "@/components/ui/icons";
+import { ToastViewport } from "@/components/ui/toast";
+import { Tooltip } from "@/components/ui/tooltip";
 import { getAnalysisHistory } from "@/lib/analysis/repository";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +17,7 @@ export default async function AnalysisHistoryPage() {
   } catch (error) {
     return <AnalysisSetupState error={error} />;
   }
+  const hasActiveRun = runs.some((run) => isActiveStatus(run.status));
 
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
@@ -26,12 +33,15 @@ export default async function AnalysisHistoryPage() {
               real trade execution.
             </p>
           </div>
-          <Link
-            className="rounded border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-            href="/"
-          >
-            Home
-          </Link>
+          <Tooltip label="Home">
+            <Link
+              aria-label="Home"
+              className="grid size-9 place-items-center rounded border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
+              href="/"
+            >
+              <HomeIcon className="size-4" />
+            </Link>
+          </Tooltip>
         </header>
 
         {runs.length === 0 ? (
@@ -54,37 +64,74 @@ export default async function AnalysisHistoryPage() {
                   <th className="px-4 py-3 font-semibold">Recommendation</th>
                   <th className="px-4 py-3 font-semibold">Risk</th>
                   <th className="px-4 py-3 font-semibold">AI calls</th>
-                  <th className="px-4 py-3 font-semibold">Created</th>
+                  <th className="px-4 py-3 font-semibold">Last scan</th>
+                  <th className="w-12 px-4 py-3 font-semibold">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200">
                 {runs.map((run) => (
                   <tr className="hover:bg-zinc-50" key={run.id}>
-                    <td className="px-4 py-3">
+                    <td className="p-0">
                       <Link
-                        className="font-medium text-zinc-950 hover:text-emerald-700"
+                        className="block px-4 py-3"
                         href={`/analysis/${run.id}`}
                       >
-                        {run.asset.symbol}
+                        <span className="font-medium text-zinc-950">
+                          {run.asset.symbol}
+                        </span>
+                        <span className="mt-1 block text-xs text-zinc-500">
+                          {run.asset.name}
+                        </span>
                       </Link>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {run.asset.name}
-                      </p>
                     </td>
-                    <td className="px-4 py-3">{run.status}</td>
-                    <td className="px-4 py-3">{formatEnum(run.requestedIntent)}</td>
+                    <td className="p-0">
+                      <Link className="block px-4 py-3" href={`/analysis/${run.id}`}>
+                        <StatusBadge status={run.status} />
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link className="block px-4 py-3" href={`/analysis/${run.id}`}>
+                        {formatEnum(run.requestedIntent)}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link className="block px-4 py-3" href={`/analysis/${run.id}`}>
+                        {run.report?.recommendationLabel ?? "N/A"}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link className="block px-4 py-3" href={`/analysis/${run.id}`}>
+                        {run.report?.riskLevel ?? "N/A"}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link className="block px-4 py-3" href={`/analysis/${run.id}`}>
+                        {run.usageRecords.length}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link className="block px-4 py-3" href={`/analysis/${run.id}`}>
+                        {formatDateTime(run.completedAt ?? run.updatedAt)}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">
-                      {run.report?.recommendationLabel ?? "N/A"}
+                      <RefreshAnalysisForm
+                        action={restartAnalysis}
+                        agentRunId={run.id}
+                        disabled={isActiveStatus(run.status)}
+                        symbol={run.asset.symbol}
+                      />
                     </td>
-                    <td className="px-4 py-3">{run.report?.riskLevel ?? "N/A"}</td>
-                    <td className="px-4 py-3">{run.usageRecords.length}</td>
-                    <td className="px-4 py-3">{formatDateTime(run.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
         )}
+        <AnalysisAutoRefresh enabled={hasActiveRun} />
+        <ToastViewport />
       </div>
     </main>
   );
@@ -115,6 +162,55 @@ function AnalysisSetupState({ error }: { error: unknown }) {
       </div>
     </main>
   );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const className =
+    status === "SUCCEEDED"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === "FAILED"
+        ? "border-red-200 bg-red-50 text-red-700"
+        : status === "RUNNING" || status === "PENDING"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-zinc-200 bg-zinc-50 text-zinc-600";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 text-xs font-medium uppercase ${className}`}
+    >
+      <StatusIcon status={status} />
+      {status}
+    </span>
+  );
+}
+
+function StatusIcon({ status }: { status: string }) {
+  if (status === "SUCCEEDED") {
+    return (
+      <svg aria-hidden="true" className="size-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="m5 12 4 4L19 6" />
+      </svg>
+    );
+  }
+
+  if (status === "FAILED") {
+    return (
+      <svg aria-hidden="true" className="size-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg aria-hidden="true" className="size-3 animate-spin" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M21 12a9 9 0 1 1-3.2-6.9" />
+    </svg>
+  );
+}
+
+function isActiveStatus(status: string): boolean {
+  return status === "PENDING" || status === "RUNNING";
 }
 
 function formatDateTime(value: Date): string {

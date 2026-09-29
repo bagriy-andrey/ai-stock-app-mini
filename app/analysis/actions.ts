@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { startDeepAnalysis } from "@/lib/analysis/orchestrator";
+import { getAnalysisRunRestartInput } from "@/lib/analysis/repository";
 
 const portfolioAnalysisFormSchema = z.object({
   positionId: z.string().min(1),
@@ -11,6 +12,10 @@ const portfolioAnalysisFormSchema = z.object({
 
 const watchlistAnalysisFormSchema = z.object({
   watchlistItemId: z.string().min(1),
+});
+
+const restartAnalysisFormSchema = z.object({
+  agentRunId: z.string().min(1),
 });
 
 export async function startPortfolioAnalysis(formData: FormData) {
@@ -22,7 +27,7 @@ export async function startPortfolioAnalysis(formData: FormData) {
 
   revalidatePath("/analysis");
   revalidatePath(`/analysis/${result.agentRunId}`);
-  redirect(`/analysis/${result.agentRunId}`);
+  redirect(buildAnalysisRedirectUrl(result));
 }
 
 export async function startWatchlistAnalysis(formData: FormData) {
@@ -34,5 +39,24 @@ export async function startWatchlistAnalysis(formData: FormData) {
 
   revalidatePath("/analysis");
   revalidatePath(`/analysis/${result.agentRunId}`);
-  redirect(`/analysis/${result.agentRunId}`);
+  redirect(buildAnalysisRedirectUrl(result));
+}
+
+export async function restartAnalysis(formData: FormData) {
+  const input = restartAnalysisFormSchema.parse(Object.fromEntries(formData));
+  const restartInput = await getAnalysisRunRestartInput(input.agentRunId);
+  const result = await startDeepAnalysis(restartInput);
+
+  revalidatePath("/analysis");
+  revalidatePath(`/analysis/${result.agentRunId}`);
+  redirect(buildAnalysisRedirectUrl(result));
+}
+
+function buildAnalysisRedirectUrl(result: {
+  agentRunId: string;
+  status: "SUCCEEDED" | "FAILED";
+}) {
+  const toast = result.status === "SUCCEEDED" ? "success" : "error";
+
+  return `/analysis/${result.agentRunId}?analysisToast=${toast}`;
 }

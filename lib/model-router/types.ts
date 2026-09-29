@@ -19,6 +19,9 @@ export type ChatMessage = {
 export type ChatCompletionRequest = {
   model: string;
   messages: ChatMessage[];
+  response_format?: {
+    type: "json_object";
+  };
   temperature?: number;
 };
 

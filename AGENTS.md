@@ -46,3 +46,7 @@ Record insights that will make future work faster, such as:
 - relationships between features, docs, and architecture decisions
 
 Do not add generic diary entries. Prefer stable, actionable notes with file references. If the chat produced no reusable learning, add nothing.
+
+## UI Tooltip Rule
+
+Use `components/ui/tooltip.tsx` for every new tooltip. Do not use native browser `title` attributes for user-facing tooltips. Native `title` may be used only where the text is not a tooltip interaction, such as document metadata or third-party-required attributes.

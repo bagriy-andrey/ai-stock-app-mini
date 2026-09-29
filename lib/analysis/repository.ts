@@ -143,3 +143,31 @@ export async function getAnalysisRunDetail(agentRunId: string) {
     },
   });
 }
+
+export async function getAnalysisRunRestartInput(agentRunId: string) {
+  const run = await prisma.agentRun.findUniqueOrThrow({
+    where: {
+      id: agentRunId,
+    },
+    select: {
+      positionId: true,
+      watchlistItemId: true,
+    },
+  });
+
+  if (run.positionId) {
+    return {
+      positionId: run.positionId,
+      source: "portfolio" as const,
+    };
+  }
+
+  if (run.watchlistItemId) {
+    return {
+      source: "watchlist" as const,
+      watchlistItemId: run.watchlistItemId,
+    };
+  }
+
+  throw new Error("Analysis run cannot be restarted because its source was removed.");
+}

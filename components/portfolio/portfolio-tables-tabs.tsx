@@ -16,6 +16,7 @@ import { CashFormModal } from "@/components/portfolio/cash-form-modal";
 import { PositionActionsMenu } from "@/components/portfolio/position-actions-menu";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
+import { AnalysisIconForm } from "@/components/analysis/analysis-action-button";
 
 export type PortfolioPosition = {
   id: string;
@@ -39,6 +40,7 @@ export type PortfolioPosition = {
     currency: string;
     observedAt: Date;
   } | null;
+  hasActiveAnalysis: boolean;
 };
 
 export type PositionPlatformHolding = {
@@ -536,30 +538,26 @@ function PositionsTable({
                       className="px-4 py-3 align-top"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <PositionActionsMenu
-                        baseCurrency={baseCurrency}
-                        cashBalances={cashBalances}
-                        createAction={createAction}
-                        deleteAction={deleteAction}
-                        exchangeOptions={exchangeOptions}
-                        position={position}
-                        sellAction={sellAction}
-                        updatePriceAction={updatePriceAction}
-                        updateAction={updateAction}
-                      />
-                      <form action={startAnalysisAction} className="mt-2">
-                        <input
-                          name="positionId"
-                          type="hidden"
-                          value={position.id}
+                      <div className="flex items-center justify-end gap-2">
+                        <AnalysisIconForm
+                          action={startAnalysisAction}
+                          disabled={position.hasActiveAnalysis}
+                          fieldName="positionId"
+                          fieldValue={position.id}
+                          symbol={position.symbol}
                         />
-                        <button
-                          className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                          type="submit"
-                        >
-                          AI analysis
-                        </button>
-                      </form>
+                        <PositionActionsMenu
+                          baseCurrency={baseCurrency}
+                          cashBalances={cashBalances}
+                          createAction={createAction}
+                          deleteAction={deleteAction}
+                          exchangeOptions={exchangeOptions}
+                          position={position}
+                          sellAction={sellAction}
+                          updatePriceAction={updatePriceAction}
+                          updateAction={updateAction}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

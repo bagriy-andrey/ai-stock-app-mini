@@ -60,4 +60,11 @@ describe("Deep analysis output validation", () => {
       summary: "ok",
     });
   });
+
+  it("repairs common model JSON formatting mistakes", () => {
+    expect(parseJsonObject('{"items":["a","b",],"summary":"ok",}')).toEqual({
+      items: ["a", "b"],
+      summary: "ok",
+    });
+  });
 });

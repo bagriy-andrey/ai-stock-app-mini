@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export type SearchableModelOption = {
   id: string;
@@ -88,27 +89,29 @@ export function SearchableModelSelect({
             value={query}
           />
           {selectedModel ? (
+            <Tooltip label="Clear selected model">
+              <button
+                aria-label="Clear selected model"
+                className="grid size-7 shrink-0 place-items-center rounded border border-zinc-200 text-zinc-500 hover:bg-zinc-100"
+                disabled={disabled}
+                onClick={clearSelection}
+                type="button"
+              >
+                <CloseIcon />
+              </button>
+            </Tooltip>
+          ) : null}
+          <Tooltip disabled={disabled} label="Toggle model list">
             <button
-              aria-label="Clear selected model"
-              className="grid size-7 shrink-0 place-items-center rounded border border-zinc-200 text-zinc-500 hover:bg-zinc-100"
+              aria-label="Toggle model list"
+              className="grid size-7 shrink-0 place-items-center rounded border border-zinc-200 text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={disabled}
-              onClick={clearSelection}
-              title="Clear selected model"
+              onClick={() => setIsOpen((value) => !value)}
               type="button"
             >
-              <CloseIcon />
+              <ChevronDownIcon />
             </button>
-          ) : null}
-          <button
-            aria-label="Toggle model list"
-            className="grid size-7 shrink-0 place-items-center rounded border border-zinc-200 text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={disabled}
-            onClick={() => setIsOpen((value) => !value)}
-            title="Toggle model list"
-            type="button"
-          >
-            <ChevronDownIcon />
-          </button>
+          </Tooltip>
         </div>
 
         {selectedModel ? <SelectedModelSummary model={selectedModel} /> : null}

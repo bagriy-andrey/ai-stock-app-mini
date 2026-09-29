@@ -10,6 +10,8 @@ import {
   formatPricePerMillionTokens,
   formatUsd,
 } from "@/lib/model-router/pricing";
+import { HomeIcon } from "@/components/ui/icons";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   getModelTierSettings,
   listOpenRouterModels,
@@ -60,12 +62,15 @@ export default async function ModelSettingsPage() {
               input tokens and {estimatedModelCallTokens.output} output tokens.
             </p>
           </div>
-          <Link
-            className="rounded border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-            href="/"
-          >
-            Home
-          </Link>
+          <Tooltip label="Home">
+            <Link
+              aria-label="Home"
+              className="grid size-9 place-items-center rounded border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
+              href="/"
+            >
+              <HomeIcon className="size-4" />
+            </Link>
+          </Tooltip>
         </header>
 
         {errorMessage ? (
