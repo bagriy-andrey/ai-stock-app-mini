@@ -19,11 +19,16 @@ Implemented today:
 - `PortfolioActivityLog`
 - `WatchlistItem`
 - `MarketPrice`
+- `DiscoveryUniverse`
+- `DiscoveryUniverseAsset`
+- `ScannerRun`
+- `ScannerSignal`
+- `MarketEvent`
+- `ScannerEventLink`
 
 Not implemented yet:
 
-- scanners and scanner signals
-- market events and event entities
+- event entities for many-to-many market-event affected entities
 - predictions, prediction scenarios, outcomes, and evaluations
 - paper portfolios, positions, orders, trades, and NAV
 - market observations, learned patterns, lessons, learning runs, reports, and alerts

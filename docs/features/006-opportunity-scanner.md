@@ -12,7 +12,7 @@ The user can find missed long-term or tactical opportunities and understand why 
 
 - Maintain discovery universes
 - Scan assets outside portfolio and watchlist
-- Use lightweight deterministic and cheap-AI triage before deep analysis
+- Use lightweight deterministic triage before deep analysis in the MVP
 - Calculate opportunity score
 - Identify long-term opportunities
 - Identify tactical opportunities
@@ -86,6 +86,12 @@ The user can find missed long-term or tactical opportunities and understand why 
 - Each opportunity includes reasons, risks, confidence, and suggested action
 - User can add surfaced asset to watchlist
 - Opportunity scanning remains scoped to configured universes and does not imply broad-market LLM analysis
+
+## Implementation Notes
+
+- Phase 3 MVP stores opportunity candidates as `ScannerSignal` rows from `OPPORTUNITY` `ScannerRun`s.
+- Opportunity scanning reads active `DiscoveryUniverseAsset` rows and excludes assets already owned or on the watchlist.
+- The first score is deterministic and based on universe priority, latest-price availability, confidence, and data-freshness penalties. Cheap-AI scoring remains optional future work.
 
 ## Open Questions
 

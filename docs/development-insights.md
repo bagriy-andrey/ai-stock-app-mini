@@ -117,3 +117,27 @@ Do not record generic progress logs. Record only insights that should help futur
 - Context: Phase 3 needed an implementation plan before schema and UI work.
 - Insight: Phase 3 scope is documented in `docs/plans/003-lightweight-scanners-event-detection-plan.md`. Start with manual scanner runs in the existing Next.js app, persist `ScannerRun`/`ScannerSignal`/`MarketEvent` provenance before escalation, keep scoring deterministic and explainable first, and defer forecasts, Paper Trader, Market Intelligence Memory, and learning cycles.
 - Files: `docs/plans/003-lightweight-scanners-event-detection-plan.md`, `docs/decisions.md`.
+
+## 2026-09-29 - Phase 3 Scanner MVP
+
+- Context: Manual scanner execution and persisted scanner signals were added.
+- Insight: Scanner UI lives at `/scanners` and `/scanners/[id]`. Server actions in `app/scanners/actions.ts` call deterministic services in `lib/scanners/scanners.ts`; pure threshold/ranking/event helpers live in `lib/scanners/thresholds.ts`, `lib/scanners/ranking.ts`, `lib/scanners/taxonomy.ts`, and `lib/scanners/events.ts`. Opportunity candidates are `ScannerSignal` rows with `suggestedAction=ADD_TO_WATCHLIST`; adding them creates a normal `WatchlistItem` and remains advisory-only.
+- Files: `app/scanners/page.tsx`, `app/scanners/[id]/page.tsx`, `app/scanners/actions.ts`, `lib/scanners/`, `prisma/schema.prisma`.
+
+## 2026-09-29 - Local Dev Port
+
+- Context: Default app ports conflicted with other local projects.
+- Insight: `npm run dev` and `npm run start` bind to `127.0.0.1:31773`; keep `APP_BASE_URL` aligned with `http://localhost:31773` in env examples and local env when changing ports.
+- Files: `package.json`, `.env.example`, `.env`.
+
+## 2026-09-29 - News/Event Scanner Provider Path
+
+- Context: The Phase 3 news/event scanner needed to move beyond a provider-missing placeholder.
+- Insight: `NEWS_EVENT` scanner now uses FMP stock news when `FMP_API_KEY` is configured, normalizes titles deterministically into the MVP event taxonomy, persists deduped `MarketEvent` rows through `dedupeKey`, and emits scanner signals. Without `FMP_API_KEY`, it still returns `PARTIAL` with a clear configuration warning.
+- Files: `lib/scanners/news-provider.ts`, `lib/scanners/scanners.ts`, `lib/scanners/repository.ts`.
+
+## 2026-09-29 - Provider-Backed Scanner Ingestion Spec
+
+- Context: Scanner usefulness depends on provider-backed prices, news, and events rather than mostly manual local data.
+- Insight: Use `docs/plans/003f-provider-backed-scanner-ingestion-plan.md` as the next scanner implementation guide. Prioritize scoped price refresh before scanner runs with FMP for stock/ETF quotes and CoinGecko for crypto spot; keep FMP news first and Marketaux as an optional upgrade for better entity-linked financial news.
+- Files: `docs/plans/003f-provider-backed-scanner-ingestion-plan.md`, `docs/features/003-market-data.md`, `docs/decisions.md`.

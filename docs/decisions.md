@@ -280,3 +280,16 @@ Scanner ranking should start with deterministic thresholds and named score compo
 ### Keep event detection narrow before Market Intelligence Memory
 
 Phase 3 introduces structured `MarketEvent` records and a small extensible event taxonomy, but does not implement market observations, learned patterns, historical case retrieval, or learning cycles. Those responsibilities remain in later Market Intelligence Memory and Learning phases.
+
+### Add provider-backed scanner ingestion as Phase 3F
+
+The next scanner improvement should be provider-backed ingestion, documented in `docs/plans/003f-provider-backed-scanner-ingestion-plan.md`.
+
+Implementation should prioritize scoped latest-price refresh before scanner runs:
+
+- FMP for stock/ETF latest quotes where `FMP_API_KEY` is configured.
+- CoinGecko for crypto spot prices.
+- FMP news as the initial financial-news path, with Marketaux as the optional upgrade when better entity-linked news and sentiment are needed.
+- SEC EDGAR, FRED/ALFRED, GDELT, and CoinGlass remain later specialized providers.
+
+Provider ingestion must stay limited to the user's portfolio, watchlist, and active discovery universes unless a broader scan is explicitly configured. Missing provider keys or provider failures should create explicit warnings or partial scanner runs rather than invented data.

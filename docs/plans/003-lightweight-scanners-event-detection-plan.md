@@ -529,6 +529,17 @@ During Phase 3 implementation, update:
 - Run lint, typecheck, tests, and build
 - Update docs and development insights
 
+### Phase 3F - Provider-Backed Scanner Ingestion
+
+Detailed specification: [003F - Provider-Backed Scanner Ingestion Plan](003f-provider-backed-scanner-ingestion-plan.md).
+
+- Refresh scoped stock/ETF and crypto latest prices before scanner runs
+- Persist provider-backed `MarketPrice` snapshots with provenance
+- Harden news/event ingestion beyond missing-provider placeholders
+- Normalize provider news into deduped `MarketEvent` records
+- Keep ingestion scoped to portfolio, watchlist, and active discovery universes
+- Add scanner scope controls before scaling to large watchlists or universes
+
 ## Completion Criteria
 
 Phase 3 is complete when:

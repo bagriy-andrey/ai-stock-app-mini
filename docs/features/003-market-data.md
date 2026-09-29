@@ -77,6 +77,18 @@ Deferred providers:
 - System marks stale or missing data
 - Phase 1D allows user-entered manual latest-price snapshots for owned and watched assets before durable provider ingestion is implemented
 
+## Scanner Ingestion Follow-Up
+
+Provider-backed scanner ingestion is specified in [003F - Provider-Backed Scanner Ingestion Plan](../plans/003f-provider-backed-scanner-ingestion-plan.md).
+
+The first practical scanner improvement should refresh scoped provider prices before scanner runs:
+
+- FMP for stock/ETF latest quotes where `FMP_API_KEY` is configured.
+- CoinGecko for crypto spot prices.
+- FMP news initially, with Marketaux as the optional upgrade path when better entity-linked financial news is needed.
+
+This follow-up should remain scoped to portfolio, watchlist, and active discovery universe assets.
+
 ## Edge Cases
 
 - Market closed
