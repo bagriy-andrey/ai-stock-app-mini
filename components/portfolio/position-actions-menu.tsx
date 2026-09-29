@@ -7,6 +7,8 @@ import { ManualPriceFormModal } from "@/components/market-data/manual-price-form
 import { ConfirmDeleteButton } from "@/components/portfolio/confirm-delete-button";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
+import { MoreVerticalIcon } from "@/components/ui/icons";
+import { Tooltip } from "@/components/ui/tooltip";
 
 type PositionActionValue = {
   id: string;
@@ -134,18 +136,17 @@ export function PositionActionsMenu({
 
   return (
     <div className="inline-flex">
-      <button
-        aria-label="Position actions"
-        className={`grid size-8 place-items-center rounded border border-zinc-300 text-zinc-700 transition hover:bg-zinc-100 focus:opacity-100 group-hover:opacity-100 ${
-          isOpen ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={() => setIsOpen((current) => !current)}
-        ref={buttonRef}
-        title="Edit"
-        type="button"
-      >
-        <PencilIcon />
-      </button>
+      <Tooltip label="More">
+        <button
+          aria-label="Position actions"
+          className="grid size-8 place-items-center rounded border border-zinc-300 text-zinc-700 transition hover:bg-zinc-100"
+          onClick={() => setIsOpen((current) => !current)}
+          ref={buttonRef}
+          type="button"
+        >
+          <MoreVerticalIcon className="size-4" />
+        </button>
+      </Tooltip>
       {isOpen && menuPosition
         ? createPortal(
         <div
@@ -259,23 +260,5 @@ export function PositionActionsMenu({
         title="Delete position"
       />
     </div>
-  );
-}
-
-function PencilIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
   );
 }

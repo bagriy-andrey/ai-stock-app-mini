@@ -13,6 +13,8 @@ The user can observe what would happen if the AI followed its own recommendation
 - Virtual portfolio
 - Virtual cash
 - Virtual holdings
+- Virtual orders and fills
+- NAV history
 - Autonomous mock decisions
 - Transaction ledger
 - Position sizing
@@ -35,6 +37,8 @@ The user can observe what would happen if the AI followed its own recommendation
 - Forecasts
 - Recommendations
 - Risk data
+- Pattern Engine evidence
+- Opportunity Scanner candidates
 - Current virtual portfolio
 - Virtual cash
 - Strategy configuration
@@ -43,7 +47,10 @@ The user can observe what would happen if the AI followed its own recommendation
 
 - Mock trades
 - Virtual holdings
+- Virtual orders and fills
+- NAV
 - P&L
+- Drawdown
 - Strategy metrics
 - Benchmark comparison
 
@@ -51,6 +58,7 @@ The user can observe what would happen if the AI followed its own recommendation
 
 - PaperPortfolio
 - PaperPosition
+- PaperOrder
 - PaperTrade
 - PaperStrategy
 - RiskConstraint
@@ -62,7 +70,7 @@ The user can observe what would happen if the AI followed its own recommendation
 
 - Strategy consumes forecast stream
 - Strategy decides whether to open, close, or resize mock position
-- Trade is recorded in ledger
+- Order and fill are recorded in ledger
 - Virtual portfolio and metrics update
 - User compares strategy against benchmark
 - Multiple strategies consume the same forecast stream independently
@@ -90,10 +98,12 @@ The user can observe what would happen if the AI followed its own recommendation
 
 - Paper Trader cannot modify real portfolio
 - All mock trades are recorded
+- Paper cash, positions, orders, fills, and NAV are stored separately from real portfolio state
 - Virtual P&L and benchmark comparison are visible
 - Risk limits are enforced
 - Paper strategies can be evaluated independently
 - Performance can be compared by model, agent, and strategy configuration
+- Paper decision quality is evaluated separately from forecast quality and deep-analysis quality
 
 ## Open Questions
 

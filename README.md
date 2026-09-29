@@ -12,6 +12,7 @@ The project is primarily focused on long-term diversified investing. Tactical/sp
 - [System architecture](docs/architecture/system-architecture.md)
 - [Agent architecture](docs/architecture/agent-architecture.md)
 - [Data model](docs/architecture/data-model.md)
+- [Architecture reconciliation audit](docs/architecture-audit-2026-09-28.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture decisions](docs/decisions.md)
 - [Feature specs](docs/features)
@@ -19,6 +20,8 @@ The project is primarily focused on long-term diversified investing. Tactical/sp
 ## Current Status
 
 Phase 0 foundation is implemented. Phase 1 portfolio, cash, watchlist, manual latest-price snapshots, MVP FX conversion, and stabilization checks are complete.
+
+The next implementation milestone is a narrowed Phase 2 Deep Analysis MVP: manually triggered TradingAgents-inspired analysis for selected portfolio/watchlist assets, with immutable input snapshots and AI usage metadata. Scanners, event detection, forecasts, outcome evaluation, Paper Trader, Market Intelligence Memory, and learning cycles are planned but not implemented.
 
 ## Local Development
 

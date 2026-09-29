@@ -12,7 +12,7 @@ The user can benefit from strong models where useful while keeping spend visible
 
 - OpenRouter integration
 - Logical model tiers: `cheap`, `standard`, `strong`
-- Task profiles for analysis, forecasting, reflection, translation, and paper-trading decisions
+- Task profiles for scanner triage, event extraction, analysis, forecasting, reflection, translation, learning, and paper-trading decisions
 - Model fallback routing
 - AI call persistence
 - Cost, token, and latency tracking
@@ -31,6 +31,7 @@ The user can benefit from strong models where useful while keeping spend visible
 - Model routing config
 - OpenRouter response metadata
 - Prediction and outcome metrics
+- Task type, prompt/template version, and input snapshot where applicable
 
 ## Outputs
 
@@ -80,6 +81,7 @@ The user can benefit from strong models where useful while keeping spend visible
 - Monthly cost can be summarized
 - Translation usage is tracked separately from analysis and forecasting usage
 - Prediction and Paper Trader records can be grouped by model, agent, and strategy configuration
+- Important AI outputs record provider, model, prompt/template version, timestamp, and available token/cost metadata
 
 ## Open Questions
 

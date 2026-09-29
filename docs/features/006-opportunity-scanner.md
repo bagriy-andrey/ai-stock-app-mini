@@ -12,6 +12,7 @@ The user can find missed long-term or tactical opportunities and understand why 
 
 - Maintain discovery universes
 - Scan assets outside portfolio and watchlist
+- Use lightweight deterministic and cheap-AI triage before deep analysis
 - Calculate opportunity score
 - Identify long-term opportunities
 - Identify tactical opportunities
@@ -23,6 +24,7 @@ The user can find missed long-term or tactical opportunities and understand why 
 - Real trade execution
 - Unlimited market universe in MVP
 - Full institutional screener
+- Expensive multi-agent analysis for every asset in the universe
 
 ## Inputs
 
@@ -42,10 +44,13 @@ The user can find missed long-term or tactical opportunities and understand why 
 - Expected upside/downside where available
 - Confidence
 - Reasons and risks
+- Scanner signals and candidate rankings
 
 ## Core Data / Entities
 
 - DiscoveryUniverse
+- ScannerRun
+- ScannerSignal
 - Opportunity
 - OpportunityScore
 - OpportunityReason
@@ -56,6 +61,7 @@ The user can find missed long-term or tactical opportunities and understand why 
 - System scans configured universe
 - Existing holdings/watchlist items are excluded or marked
 - Candidate assets are scored
+- Only high-priority candidates become eligible for Deep Analysis and Forecast Engine work
 - Top opportunities are shown
 - User adds candidate to watchlist
 
@@ -79,6 +85,7 @@ The user can find missed long-term or tactical opportunities and understand why 
 - System can surface assets outside current portfolio
 - Each opportunity includes reasons, risks, confidence, and suggested action
 - User can add surfaced asset to watchlist
+- Opportunity scanning remains scoped to configured universes and does not imply broad-market LLM analysis
 
 ## Open Questions
 
@@ -90,4 +97,3 @@ The user can find missed long-term or tactical opportunities and understand why 
 - Sector-specific scanners
 - Crypto-specific universe
 - User-defined scanner rules
-

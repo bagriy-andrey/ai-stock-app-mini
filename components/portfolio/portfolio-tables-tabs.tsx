@@ -16,6 +16,7 @@ import { CashFormModal } from "@/components/portfolio/cash-form-modal";
 import { PositionActionsMenu } from "@/components/portfolio/position-actions-menu";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
+import { AnalysisIconForm } from "@/components/analysis/analysis-action-button";
 
 export type PortfolioPosition = {
   id: string;
@@ -39,6 +40,7 @@ export type PortfolioPosition = {
     currency: string;
     observedAt: Date;
   } | null;
+  hasActiveAnalysis: boolean;
 };
 
 export type PositionPlatformHolding = {
@@ -158,6 +160,7 @@ export function PortfolioTablesTabs({
   updatePositionAction,
   deletePositionAction,
   sellPositionAction,
+  startAnalysisAction,
   upsertCashBalanceAction,
   withdrawCashBalanceAction,
   deleteCashBalanceAction,
@@ -175,6 +178,7 @@ export function PortfolioTablesTabs({
   updatePositionAction: (formData: FormData) => Promise<void>;
   deletePositionAction: (formData: FormData) => Promise<void>;
   sellPositionAction: (formData: FormData) => Promise<void>;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   upsertCashBalanceAction: (formData: FormData) => Promise<void>;
   withdrawCashBalanceAction: (formData: FormData) => Promise<void>;
   deleteCashBalanceAction: (formData: FormData) => Promise<void>;
@@ -252,6 +256,7 @@ export function PortfolioTablesTabs({
           title="Crypto"
           updateAction={updatePositionAction}
           sellAction={sellPositionAction}
+          startAnalysisAction={startAnalysisAction}
           updatePriceAction={updatePriceAction}
           valuationPositions={valuationPositions}
         />
@@ -282,6 +287,7 @@ export function PortfolioTablesTabs({
           title="Stocks & ETF"
           updateAction={updatePositionAction}
           sellAction={sellPositionAction}
+          startAnalysisAction={startAnalysisAction}
           updatePriceAction={updatePriceAction}
           valuationPositions={valuationPositions}
         />
@@ -405,6 +411,7 @@ function PositionsTable({
   updateAction,
   deleteAction,
   sellAction,
+  startAnalysisAction,
   createAction,
   updatePriceAction,
   activityLogs,
@@ -420,6 +427,7 @@ function PositionsTable({
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
   sellAction: (formData: FormData) => Promise<void>;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   createAction: (formData: FormData) => Promise<void>;
   updatePriceAction: (formData: FormData) => Promise<void>;
   activityLogs: PortfolioActivityLog[];
@@ -530,17 +538,26 @@ function PositionsTable({
                       className="px-4 py-3 align-top"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <PositionActionsMenu
-                        baseCurrency={baseCurrency}
-                        cashBalances={cashBalances}
-                        createAction={createAction}
-                        deleteAction={deleteAction}
-                        exchangeOptions={exchangeOptions}
-                        position={position}
-                        sellAction={sellAction}
-                        updatePriceAction={updatePriceAction}
-                        updateAction={updateAction}
-                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <AnalysisIconForm
+                          action={startAnalysisAction}
+                          disabled={position.hasActiveAnalysis}
+                          fieldName="positionId"
+                          fieldValue={position.id}
+                          symbol={position.symbol}
+                        />
+                        <PositionActionsMenu
+                          baseCurrency={baseCurrency}
+                          cashBalances={cashBalances}
+                          createAction={createAction}
+                          deleteAction={deleteAction}
+                          exchangeOptions={exchangeOptions}
+                          position={position}
+                          sellAction={sellAction}
+                          updatePriceAction={updatePriceAction}
+                          updateAction={updateAction}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

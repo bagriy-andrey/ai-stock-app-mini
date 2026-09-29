@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ManualPriceFormModal } from "@/components/market-data/manual-price-form-modal";
+import { AnalysisIconForm } from "@/components/analysis/analysis-action-button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { PositionFormModal } from "@/components/portfolio/position-form-modal";
 import { PositionSellModal } from "@/components/portfolio/position-sell-modal";
 import {
@@ -90,6 +92,7 @@ export function WatchlistTable({
   portfolioPositions,
   createPositionAction,
   sellPositionAction,
+  startAnalysisAction,
   updatePriceAction,
 }: {
   items: WatchlistItemSummary[];
@@ -102,6 +105,7 @@ export function WatchlistTable({
   portfolioPositions: PortfolioPosition[];
   createPositionAction: (formData: FormData) => Promise<void>;
   sellPositionAction: (formData: FormData) => Promise<void>;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   updatePriceAction: (formData: FormData) => Promise<void>;
 }) {
   const [activeTab, selectActiveTab] = useStoredWatchlistTab();
@@ -186,6 +190,7 @@ export function WatchlistTable({
               item={item}
               key={item.id}
               onOpen={setSelectedItem}
+              startAnalysisAction={startAnalysisAction}
               onUpdatePrice={setPriceItem}
             />
           ))}
@@ -291,11 +296,13 @@ function WatchlistWidget({
   item,
   deleteAction,
   onOpen,
+  startAnalysisAction,
   onUpdatePrice,
 }: {
   item: WatchlistItemSummary;
   deleteAction: (formData: FormData) => Promise<void>;
   onOpen: (item: WatchlistItemSummary) => void;
+  startAnalysisAction: (formData: FormData) => Promise<void>;
   onUpdatePrice: (item: WatchlistItemSummary) => void;
 }) {
   return (
@@ -323,21 +330,30 @@ function WatchlistWidget({
             {item.name}
           </p>
         </div>
-        <form
-          action={deleteAction}
-          className="shrink-0"
+        <div
+          className="flex shrink-0 items-center gap-2"
           onClick={(event) => event.stopPropagation()}
         >
-          <input name="watchlistItemId" type="hidden" value={item.id} />
-          <button
-            aria-label={`Remove ${item.symbol} from watchlist`}
-            className="grid size-8 place-items-center rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-            title="Remove from watchlist"
-            type="submit"
-          >
-            <HeartIcon />
-          </button>
-        </form>
+          <AnalysisIconForm
+            action={startAnalysisAction}
+            disabled={item.hasActiveAnalysis}
+            fieldName="watchlistItemId"
+            fieldValue={item.id}
+            symbol={item.symbol}
+          />
+          <Tooltip label="Remove from watchlist">
+            <form action={deleteAction}>
+              <input name="watchlistItemId" type="hidden" value={item.id} />
+              <button
+                aria-label={`Remove ${item.symbol} from watchlist`}
+                className="grid size-8 place-items-center rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                type="submit"
+              >
+                <HeartIcon />
+              </button>
+            </form>
+          </Tooltip>
+        </div>
       </div>
 
       <div className="min-w-0">
@@ -596,6 +612,7 @@ function toPortfolioPosition(item: WatchlistItemSummary): PortfolioPosition {
     openedAt: item.createdAt,
     notes: item.notes,
     latestPrice: item.latestPrice,
+    hasActiveAnalysis: item.hasActiveAnalysis,
   };
 }
 

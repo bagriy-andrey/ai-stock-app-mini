@@ -53,6 +53,7 @@ export type PortfolioPositionSummary = {
     currency: string;
     observedAt: Date;
   } | null;
+  hasActiveAnalysis: boolean;
 };
 
 export type CashBalanceSummary = {
@@ -155,6 +156,13 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
   });
 
   const positions = portfolioWithData.positions.map(toPositionSummary);
+  const activeAnalysisAssetIds = await getActiveAnalysisAssetIds(
+    positions.map((position) => position.assetId),
+  );
+  const positionsWithAnalysisState = positions.map((position) => ({
+    ...position,
+    hasActiveAnalysis: activeAnalysisAssetIds.has(position.assetId),
+  }));
   const cashBalances = portfolioWithData.cashBalances.map(toCashBalanceSummary);
   const exchanges = portfolioWithData.exchanges.map(toPortfolioExchangeSummary);
   const activityLogs = await getPortfolioActivityLogs(portfolioWithData.id);
@@ -164,7 +172,7 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
   const valuation = calculatePortfolioValuation({
     baseCurrency: portfolioWithData.baseCurrency,
     fxRates,
-    positions: positions.map((position) => ({
+    positions: positionsWithAnalysisState.map((position) => ({
       id: position.id,
       quantity: position.quantity,
       averageCost: position.averageCost,
@@ -178,7 +186,7 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
     id: portfolioWithData.id,
     name: portfolioWithData.name,
     baseCurrency: portfolioWithData.baseCurrency,
-    positions,
+    positions: positionsWithAnalysisState,
     cashBalances,
     exchanges,
     activityLogs,
@@ -263,7 +271,30 @@ function toPositionSummary(
           observedAt: latestPrice.observedAt,
         }
       : null,
+    hasActiveAnalysis: false,
   };
+}
+
+async function getActiveAnalysisAssetIds(assetIds: string[]): Promise<Set<string>> {
+  if (assetIds.length === 0) {
+    return new Set();
+  }
+
+  const runs = await prisma.agentRun.findMany({
+    where: {
+      assetId: {
+        in: assetIds,
+      },
+      status: {
+        in: ["PENDING", "RUNNING"],
+      },
+    },
+    select: {
+      assetId: true,
+    },
+  });
+
+  return new Set(runs.map((run) => run.assetId));
 }
 
 function toPositionPlatformHoldingSummary(

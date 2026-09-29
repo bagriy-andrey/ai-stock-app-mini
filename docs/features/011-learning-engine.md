@@ -10,6 +10,10 @@ The user can see which signals, agents, models, and strategies actually worked o
 
 ## Scope
 
+- Market learning
+- Agent learning
+- Market observations / historical cases
+- Learned market patterns
 - Agent performance tracking
 - Performance by horizon
 - Performance by asset and asset type
@@ -20,6 +24,8 @@ The user can see which signals, agents, models, and strategies actually worked o
 - Confidence calibration
 - TradingAgents reflection memory
 - Mathematical performance layer
+- Weekly, monthly, quarterly, and yearly learning cycles
+- Internal learning reports
 
 ## Non-Goals
 
@@ -35,19 +41,31 @@ The user can see which signals, agents, models, and strategies actually worked o
 - External signal records and provider provenance
 - Market regime labels
 - Paper Trader results
+- Market events
+- Scanner signals
+- Market observations
 
 ## Outputs
 
 - Agent performance metrics
 - Model performance metrics
+- Market observations
+- Learned patterns
+- Agent lessons
 - Calibrated weights
 - Reflection summaries
 - Recommendations for model/agent configuration
+- Internal learning reports
 
 ## Core Data / Entities
 
 - AgentPerformanceMetric
 - ModelPerformanceMetric
+- MarketObservation
+- LearnedPattern
+- AgentLesson
+- LearningRun
+- SignalPerformanceMetric
 - MarketRegime
 - SignalWeight
 - ReflectionRecord
@@ -55,10 +73,14 @@ The user can see which signals, agents, models, and strategies actually worked o
 ## Main Flows
 
 - System aggregates resolved predictions
+- System updates market observations as horizons mature
+- System aggregates observations into learned patterns
+- System records when no meaningful relationship exists
 - Metrics are grouped by agent, model, asset, horizon, and regime
 - Metrics are grouped by provider/signal type when forecasts used external data
 - Calibration recommendations are produced
 - Weights are updated when rules allow
+- Periodic learning runs create versioned internal reports and lessons
 
 ## Edge Cases
 
@@ -81,6 +103,8 @@ The user can see which signals, agents, models, and strategies actually worked o
 - System can report agent and model performance
 - Weight changes are based on measured outcomes
 - Learning process preserves point-in-time correctness
+- Market learning and agent learning are stored separately
+- Periodic learning outputs are traceable and do not blindly rewrite production behavior
 
 ## Open Questions
 
