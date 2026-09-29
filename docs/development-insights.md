@@ -111,3 +111,9 @@ Do not record generic progress logs. Record only insights that should help futur
 - Context: `/settings/models` separates tier selection from the full OpenRouter catalog.
 - Insight: Keep server-side model loading in `app/settings/models/page.tsx` and put tab/search persistence in `components/model-router/model-settings-tabs.tsx`. Active tab uses `modelSettings.activeTab`; catalog name search uses `modelSettings.catalogSearch`.
 - Files: `app/settings/models/page.tsx`, `components/model-router/model-settings-tabs.tsx`.
+
+## 2026-09-29 - Phase 3 Scanner Planning
+
+- Context: Phase 3 needed an implementation plan before schema and UI work.
+- Insight: Phase 3 scope is documented in `docs/plans/003-lightweight-scanners-event-detection-plan.md`. Start with manual scanner runs in the existing Next.js app, persist `ScannerRun`/`ScannerSignal`/`MarketEvent` provenance before escalation, keep scoring deterministic and explainable first, and defer forecasts, Paper Trader, Market Intelligence Memory, and learning cycles.
+- Files: `docs/plans/003-lightweight-scanners-event-detection-plan.md`, `docs/decisions.md`.

@@ -262,3 +262,21 @@ Each AI analysis run should store an input snapshot containing the asset, market
 Phase 2 stores this immutable JSON snapshot on `AgentRun.inputSnapshot`. A shared `InputSnapshot` table is deferred until forecasts, scanners, and learning workflows need cross-domain snapshot references.
 
 This keeps manual analysis reviewable and prepares the system for later forecast evaluation and learning without data leakage.
+
+## Phase 3 Decisions
+
+### Start scanner implementation with manual runs
+
+Phase 3 starts with manually triggered scanner runs in the existing Next.js application. Scheduled automation should reuse the same scanner services later, but the first implementation should keep scanner scope, inputs, outputs, and failures visible in the UI.
+
+### Persist scanner runs and signals before Deep Analysis escalation
+
+Scanner output must be persisted as `ScannerRun` and `ScannerSignal` records before any expensive Deep Analysis escalation. This preserves provenance, supports auditability, and explains why deeper analysis was or was not triggered.
+
+### Keep Phase 3 scoring explainable and cheap-first
+
+Scanner ranking should start with deterministic thresholds and named score components. Cheap AI classification may help normalize ambiguous news or events, but the full TradingAgents-inspired Deep Analysis workflow must not run continuously for every scanned asset.
+
+### Keep event detection narrow before Market Intelligence Memory
+
+Phase 3 introduces structured `MarketEvent` records and a small extensible event taxonomy, but does not implement market observations, learned patterns, historical case retrieval, or learning cycles. Those responsibilities remain in later Market Intelligence Memory and Learning phases.
