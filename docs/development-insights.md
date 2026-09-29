@@ -105,3 +105,9 @@ Do not record generic progress logs. Record only insights that should help futur
 - Context: Deep Analysis runs could fail after successful model calls when the final model returned malformed JSON.
 - Insight: Analysis orchestration should request OpenRouter JSON mode and still defensively fallback when parsing/schema validation fails. Malformed agent output should produce a low-confidence fallback summary/report with a warning instead of failing the whole run.
 - Files: `lib/analysis/orchestrator.ts`, `lib/analysis/json.ts`, `lib/model-router/types.ts`.
+
+## 2026-09-29 - Model Settings Tabs
+
+- Context: `/settings/models` separates tier selection from the full OpenRouter catalog.
+- Insight: Keep server-side model loading in `app/settings/models/page.tsx` and put tab/search persistence in `components/model-router/model-settings-tabs.tsx`. Active tab uses `modelSettings.activeTab`; catalog name search uses `modelSettings.catalogSearch`.
+- Files: `app/settings/models/page.tsx`, `components/model-router/model-settings-tabs.tsx`.
