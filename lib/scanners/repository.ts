@@ -25,6 +25,7 @@ export type ScannerSignalInput = {
   dataFreshness: Prisma.InputJsonValue;
   isDeepAnalysisCandidate: boolean;
   suggestedAction: string;
+  marketEventIds?: string[];
 };
 
 export type ScannerRunSummary = {
@@ -67,6 +68,25 @@ export type ScannerSignalSummary = {
 
 export type ScannerRunDetail = ScannerRunSummary & {
   signals: ScannerSignalSummary[];
+};
+
+export type DiscoveryUniverseSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  assetCount: number;
+  assets: Array<{
+    id: string;
+    universeAssetId: string;
+    symbol: string;
+    name: string;
+    assetType: string;
+    provider: string;
+    providerSymbol: string;
+    priority: number;
+    notes: string | null;
+  }>;
 };
 
 export async function createScannerRun(input: {
@@ -118,6 +138,14 @@ export async function completeScannerRun(input: {
           dataFreshness: signal.dataFreshness,
           isDeepAnalysisCandidate: signal.isDeepAnalysisCandidate,
           suggestedAction: signal.suggestedAction,
+          eventLinks:
+            signal.marketEventIds && signal.marketEventIds.length > 0
+              ? {
+                  create: signal.marketEventIds.map((marketEventId) => ({
+                    marketEventId,
+                  })),
+                }
+              : undefined,
         })),
       },
     },
@@ -171,6 +199,55 @@ export async function getScannerDashboard(): Promise<ScannerRunSummary[]> {
     signalCount: run.signals.length,
     candidateCount: run.signals.filter((signal) => signal.isDeepAnalysisCandidate)
       .length,
+  }));
+}
+
+export async function getDiscoveryUniverseDashboard(): Promise<
+  DiscoveryUniverseSummary[]
+> {
+  const universes = await prisma.discoveryUniverse.findMany({
+    orderBy: [
+      {
+        isActive: "desc",
+      },
+      {
+        name: "asc",
+      },
+    ],
+    include: {
+      assets: {
+        orderBy: [
+          {
+            priority: "desc",
+          },
+          {
+            createdAt: "asc",
+          },
+        ],
+        include: {
+          asset: true,
+        },
+      },
+    },
+  });
+
+  return universes.map((universe) => ({
+    id: universe.id,
+    name: universe.name,
+    description: universe.description,
+    isActive: universe.isActive,
+    assetCount: universe.assets.length,
+    assets: universe.assets.map((entry) => ({
+      id: entry.assetId,
+      universeAssetId: entry.id,
+      symbol: entry.asset.symbol,
+      name: entry.asset.name,
+      assetType: entry.asset.assetType,
+      provider: entry.asset.provider,
+      providerSymbol: entry.asset.providerSymbol,
+      priority: entry.priority,
+      notes: entry.notes,
+    })),
   }));
 }
 

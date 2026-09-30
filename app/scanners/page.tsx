@@ -1,8 +1,20 @@
 import Link from "next/link";
-import { runScannerAction } from "@/app/scanners/actions";
+import {
+  addDiscoveryUniverseAsset,
+  createDiscoveryUniverse,
+  deleteDiscoveryUniverse,
+  removeDiscoveryUniverseAsset,
+  runScannerAction,
+  toggleDiscoveryUniverse,
+} from "@/app/scanners/actions";
+import { DiscoveryUniverseManager } from "@/components/scanners/discovery-universe-manager";
+import { ScannerRunCard } from "@/components/scanners/scanner-run-card";
 import { HomeIcon } from "@/components/ui/icons";
 import { Tooltip } from "@/components/ui/tooltip";
-import { getScannerDashboard } from "@/lib/scanners/repository";
+import {
+  getDiscoveryUniverseDashboard,
+  getScannerDashboard,
+} from "@/lib/scanners/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +28,13 @@ const scannerButtons = [
 
 export default async function ScannersPage() {
   let runs: Awaited<ReturnType<typeof getScannerDashboard>>;
+  let universes: Awaited<ReturnType<typeof getDiscoveryUniverseDashboard>>;
 
   try {
-    runs = await getScannerDashboard();
+    [runs, universes] = await Promise.all([
+      getScannerDashboard(),
+      getDiscoveryUniverseDashboard(),
+    ]);
   } catch (error) {
     return <ScannerSetupState error={error} />;
   }
@@ -50,24 +66,23 @@ export default async function ScannersPage() {
 
         <section className="grid gap-3 md:grid-cols-5">
           {scannerButtons.map((scanner) => (
-            <form
+            <ScannerRunCard
               action={runScannerAction}
-              className="rounded border border-zinc-200 bg-white p-4"
               key={scanner.type}
-            >
-              <input name="scannerType" type="hidden" value={scanner.type} />
-              <p className="text-sm font-medium text-zinc-500">
-                {scanner.label} scanner
-              </p>
-              <button
-                className="mt-3 w-full rounded border border-emerald-700 bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-                type="submit"
-              >
-                Run manually
-              </button>
-            </form>
+              scanner={scanner}
+              universes={universes}
+            />
           ))}
         </section>
+
+        <DiscoveryUniverseManager
+          addAssetAction={addDiscoveryUniverseAsset}
+          createUniverseAction={createDiscoveryUniverse}
+          deleteUniverseAction={deleteDiscoveryUniverse}
+          removeAssetAction={removeDiscoveryUniverseAsset}
+          toggleUniverseAction={toggleDiscoveryUniverse}
+          universes={universes}
+        />
 
         {runs.length === 0 ? (
           <section className="rounded border border-dashed border-zinc-300 bg-white px-5 py-10 text-center">

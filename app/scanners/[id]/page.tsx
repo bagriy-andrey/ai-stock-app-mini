@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { addOpportunitySignalToWatchlist } from "@/app/scanners/actions";
+import {
+  addOpportunitySignalToWatchlist,
+  runDeepAnalysisFromScannerSignal,
+} from "@/app/scanners/actions";
 import { HomeIcon } from "@/components/ui/icons";
 import { Tooltip } from "@/components/ui/tooltip";
 import { getScannerRunDetail } from "@/lib/scanners/repository";
@@ -20,6 +23,7 @@ export default async function ScannerRunPage({
   }
 
   const warnings = extractWarnings(run.inputScope);
+  const notices = extractStringArray(run.inputScope, "notices");
 
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
@@ -75,11 +79,24 @@ export default async function ScannerRunPage({
         {warnings.length > 0 ? (
           <section className="rounded border border-amber-300 bg-amber-50 p-4">
             <h2 className="text-sm font-semibold uppercase text-amber-900">
-              Missing data warnings
+              Scanner warnings
             </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
               {warnings.map((warning) => (
                 <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {notices.length > 0 ? (
+          <section className="rounded border border-sky-200 bg-sky-50 p-4">
+            <h2 className="text-sm font-semibold uppercase text-sky-900">
+              Scanner notices
+            </h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-sky-900">
+              {notices.map((notice) => (
+                <li key={notice}>{notice}</li>
               ))}
             </ul>
           </section>
@@ -146,6 +163,8 @@ export default async function ScannerRunPage({
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <JsonList title="Reasons" value={signal.reasons} />
                   <JsonList title="Risks" value={signal.risks} />
+                  <JsonList title="Source refs" value={signal.sourceRefs} />
+                  <JsonList title="Data freshness" value={signal.dataFreshness} />
                 </div>
 
                 {signal.suggestedAction === "ADD_TO_WATCHLIST" ? (
@@ -160,6 +179,22 @@ export default async function ScannerRunPage({
                       type="submit"
                     >
                       Add to watchlist
+                    </button>
+                  </form>
+                ) : null}
+
+                {signal.isDeepAnalysisCandidate && signal.assetId ? (
+                  <form action={runDeepAnalysisFromScannerSignal} className="mt-4">
+                    <input
+                      name="scannerSignalId"
+                      type="hidden"
+                      value={signal.id}
+                    />
+                    <button
+                      className="rounded border border-zinc-950 bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+                      type="submit"
+                    >
+                      Run Deep Analysis
                     </button>
                   </form>
                 ) : null}
@@ -230,14 +265,19 @@ function severityTone(severity: string): string {
 }
 
 function extractWarnings(inputScope: unknown): string[] {
-  if (
-    typeof inputScope === "object" &&
-    inputScope &&
-    "warnings" in inputScope &&
-    Array.isArray(inputScope.warnings)
-  ) {
-    return inputScope.warnings.filter(
-      (warning): warning is string => typeof warning === "string",
+  return extractStringArray(inputScope, "warnings");
+}
+
+function extractStringArray(inputScope: unknown, key: string): string[] {
+  if (typeof inputScope !== "object" || !inputScope) {
+    return [];
+  }
+
+  const value = (inputScope as Record<string, unknown>)[key];
+
+  if (Array.isArray(value)) {
+    return value.filter(
+      (value): value is string => typeof value === "string",
     );
   }
 

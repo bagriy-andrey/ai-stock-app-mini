@@ -6,11 +6,55 @@ import type {
 } from "@/lib/scanners/ranking";
 
 const FMP_NEWS_LIMIT = 40;
+const TIINGO_NEWS_LIMIT = 50;
 
 export type NewsAsset = Pick<
   Asset,
-  "id" | "symbol" | "name" | "assetType" | "sector" | "region"
+  | "id"
+  | "symbol"
+  | "name"
+  | "assetType"
+  | "sector"
+  | "region"
+  | "providerSymbol"
 >;
+
+export type ProviderNewsEvent = ReturnType<typeof normalizeMarketEvent>;
+
+export type NewsProviderName = "tiingo" | "fmp";
+
+export type NewsProviderDiagnostics = {
+  provider: NewsProviderName;
+  configured: boolean;
+  requestedSymbols: string[];
+  endpointAttempts: Array<{
+    endpoint: string;
+    ok: boolean;
+    status: number | null;
+    rawItemCount: number;
+  }>;
+  rawItemCount: number;
+  normalizedEventCount: number;
+  droppedItemCount: number;
+};
+
+export type NewsProviderResult = {
+  events: ProviderNewsEvent[];
+  diagnostics: NewsProviderDiagnostics[];
+  selectedProvider: NewsProviderName | null;
+};
+
+export type TiingoNewsItem = {
+  id?: number;
+  title?: string;
+  url?: string;
+  source?: string;
+  publishedDate?: string;
+  crawlDate?: string;
+  description?: string;
+  tickers?: string[];
+  tags?: string[];
+};
 
 export type FmpNewsItem = {
   symbol?: string;
@@ -24,31 +68,118 @@ export type FmpNewsItem = {
   image?: string;
 };
 
-export type ProviderNewsEvent = ReturnType<typeof normalizeMarketEvent>;
+export async function fetchProviderNewsEvents(
+  assets: NewsAsset[],
+): Promise<NewsProviderResult> {
+  const diagnostics: NewsProviderDiagnostics[] = [];
+  const tiingoResult = await fetchTiingoNewsEvents(assets);
+  diagnostics.push(tiingoResult.diagnostics);
+
+  if (tiingoResult.events.length > 0) {
+    return {
+      events: tiingoResult.events,
+      diagnostics,
+      selectedProvider: "tiingo",
+    };
+  }
+
+  const fmpResult = await fetchFmpNewsEventsWithDiagnostics(assets);
+  diagnostics.push(fmpResult.diagnostics);
+
+  return {
+    events: fmpResult.events,
+    diagnostics,
+    selectedProvider: fmpResult.events.length > 0 ? "fmp" : null,
+  };
+}
 
 export async function fetchFmpNewsEvents(
   assets: NewsAsset[],
 ): Promise<ProviderNewsEvent[]> {
+  return (await fetchFmpNewsEventsWithDiagnostics(assets)).events;
+}
+
+export async function fetchTiingoNewsEvents(
+  assets: NewsAsset[],
+): Promise<{
+  events: ProviderNewsEvent[];
+  diagnostics: NewsProviderDiagnostics;
+}> {
+  const token = process.env.TIINGO_API_KEY;
+  const symbols = getStockSymbols(assets);
+
+  if (!token || symbols.length === 0) {
+    return {
+      events: [],
+      diagnostics: emptyDiagnostics("tiingo", symbols, Boolean(token)),
+    };
+  }
+
+  const { items, endpointAttempt } = await fetchTiingoNews(symbols, token);
+  const assetsBySymbol = buildAssetsBySymbol(assets);
+  const events = items.flatMap((item) => {
+    const title = item.title?.trim();
+    const occurredAt = parseNewsDate(item.publishedDate ?? item.crawlDate);
+    const matchedAsset = findFirstMatchedAsset(item.tickers ?? [], assetsBySymbol);
+
+    if (!matchedAsset || !title || !occurredAt) {
+      return [];
+    }
+
+    const classification = classifyNewsTitle(title);
+
+    return normalizeMarketEvent({
+      eventType: classification.eventType,
+      occurredAt,
+      sourceProvider: "tiingo",
+      sourceUrl: item.url ?? null,
+      sourceTitle: title,
+      affectedAssetId: matchedAsset.id,
+      affectedEntity: matchedAsset.name,
+      assetClass: toAssetClass(matchedAsset.assetType),
+      sector: matchedAsset.sector,
+      country: matchedAsset.region,
+      direction: classification.direction,
+      severity: classification.severity,
+      confidence: classification.confidence,
+      summary: item.description?.trim() || title,
+      rawPayload: item,
+    });
+  });
+
+  return {
+    events,
+    diagnostics: {
+      provider: "tiingo",
+      configured: true,
+      requestedSymbols: symbols,
+      endpointAttempts: [endpointAttempt],
+      rawItemCount: items.length,
+      normalizedEventCount: events.length,
+      droppedItemCount: Math.max(0, items.length - events.length),
+    },
+  };
+}
+
+export async function fetchFmpNewsEventsWithDiagnostics(
+  assets: NewsAsset[],
+): Promise<{
+  events: ProviderNewsEvent[];
+  diagnostics: NewsProviderDiagnostics;
+}> {
   const apiKey = process.env.FMP_API_KEY;
+  const symbols = getStockSymbols(assets);
 
-  if (!apiKey) {
-    return [];
+  if (!apiKey || symbols.length === 0) {
+    return {
+      events: [],
+      diagnostics: emptyDiagnostics("fmp", symbols, Boolean(apiKey)),
+    };
   }
 
-  const symbols = assets
-    .filter((asset) => asset.assetType !== "CRYPTO")
-    .map((asset) => asset.symbol.toUpperCase());
-
-  if (symbols.length === 0) {
-    return [];
-  }
-
-  const items = await fetchFmpNews(symbols, apiKey);
-  const assetsBySymbol = new Map(
-    assets.map((asset) => [asset.symbol.toUpperCase(), asset]),
-  );
-
-  return items.flatMap((item) => {
+  const { items, endpointAttempts } = await fetchFmpNews(symbols, apiKey);
+  const assetsBySymbol = buildAssetsBySymbol(assets);
+  const events = items.flatMap((item) => {
     const symbol = item.symbol?.toUpperCase();
     const asset = symbol ? assetsBySymbol.get(symbol) : null;
     const title = item.title?.trim();
@@ -78,50 +209,131 @@ export async function fetchFmpNewsEvents(
       rawPayload: item,
     });
   });
+
+  return {
+    events,
+    diagnostics: {
+      provider: "fmp",
+      configured: true,
+      requestedSymbols: symbols,
+      endpointAttempts,
+      rawItemCount: items.length,
+      normalizedEventCount: events.length,
+      droppedItemCount: Math.max(0, items.length - events.length),
+    },
+  };
+}
+
+async function fetchTiingoNews(
+  symbols: string[],
+  token: string,
+): Promise<{
+  items: TiingoNewsItem[];
+  endpointAttempt: NewsProviderDiagnostics["endpointAttempts"][number];
+}> {
+  const params = new URLSearchParams({
+    tickers: symbols.slice(0, 50).join(",").toLowerCase(),
+    limit: String(TIINGO_NEWS_LIMIT),
+    sortBy: "publishedDate",
+    onlyWithTickers: "true",
+    token,
+  });
+  const response = await fetch(
+    `https://api.tiingo.com/tiingo/news?${params.toString()}`,
+    {
+      next: {
+        revalidate: 5 * 60,
+      },
+    },
+  );
+  const items = response.ok
+    ? parseArrayResponse<TiingoNewsItem>(await response.json())
+    : [];
+
+  return {
+    items,
+    endpointAttempt: {
+      endpoint: "tiingo/news",
+      ok: response.ok,
+      status: response.status,
+      rawItemCount: items.length,
+    },
+  };
 }
 
 async function fetchFmpNews(
   symbols: string[],
   apiKey: string,
-): Promise<FmpNewsItem[]> {
+): Promise<{
+  items: FmpNewsItem[];
+  endpointAttempts: NewsProviderDiagnostics["endpointAttempts"];
+}> {
+  const endpointAttempts: NewsProviderDiagnostics["endpointAttempts"] = [];
   const params = new URLSearchParams({
     tickers: symbols.slice(0, 25).join(","),
     limit: String(FMP_NEWS_LIMIT),
     apikey: apiKey,
   });
-  const legacyUrl = `https://financialmodelingprep.com/api/v3/stock_news?${params.toString()}`;
-
-  const legacyResponse = await fetch(legacyUrl, {
-    next: {
-      revalidate: 5 * 60,
+  const legacyResponse = await fetch(
+    `https://financialmodelingprep.com/api/v3/stock_news?${params.toString()}`,
+    {
+      next: {
+        revalidate: 5 * 60,
+      },
     },
+  );
+  const legacyItems = legacyResponse.ok
+    ? parseArrayResponse<FmpNewsItem>(await legacyResponse.json())
+    : [];
+  endpointAttempts.push({
+    endpoint: "api/v3/stock_news",
+    ok: legacyResponse.ok,
+    status: legacyResponse.status,
+    rawItemCount: legacyItems.length,
   });
-
-  if (legacyResponse.ok) {
-    return parseFmpNewsResponse(await legacyResponse.json());
-  }
 
   const stableParams = new URLSearchParams({
     symbols: symbols.slice(0, 25).join(","),
     limit: String(FMP_NEWS_LIMIT),
     apikey: apiKey,
   });
-  const stableUrl = `https://financialmodelingprep.com/stable/news/stock?${stableParams.toString()}`;
-  const stableResponse = await fetch(stableUrl, {
-    next: {
-      revalidate: 5 * 60,
+  const stableResponse = await fetch(
+    `https://financialmodelingprep.com/stable/news/stock?${stableParams.toString()}`,
+    {
+      next: {
+        revalidate: 5 * 60,
+      },
     },
-  });
+  );
 
   if (!stableResponse.ok) {
-    return [];
+    endpointAttempts.push({
+      endpoint: "stable/news/stock",
+      ok: false,
+      status: stableResponse.status,
+      rawItemCount: 0,
+    });
+
+    return {
+      items: legacyItems,
+      endpointAttempts,
+    };
   }
 
-  return parseFmpNewsResponse(await stableResponse.json());
-}
+  const stableItems = parseArrayResponse<FmpNewsItem>(
+    await stableResponse.json(),
+  );
+  endpointAttempts.push({
+    endpoint: "stable/news/stock",
+    ok: true,
+    status: stableResponse.status,
+    rawItemCount: stableItems.length,
+  });
 
-function parseFmpNewsResponse(value: unknown): FmpNewsItem[] {
-  return Array.isArray(value) ? (value as FmpNewsItem[]) : [];
+  return {
+    items: dedupeFmpNewsItems([...legacyItems, ...stableItems]),
+    endpointAttempts,
+  };
 }
 
 function classifyNewsTitle(title: string): {
@@ -214,6 +426,59 @@ function negative(
   };
 }
 
+function getStockSymbols(assets: NewsAsset[]): string[] {
+  return [
+    ...new Set(
+      assets
+        .filter((asset) => asset.assetType !== "CRYPTO")
+        .map((asset) => (asset.providerSymbol || asset.symbol).toUpperCase())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function buildAssetsBySymbol(assets: NewsAsset[]) {
+  return new Map(
+    assets.flatMap((asset) =>
+      [asset.symbol, asset.providerSymbol]
+        .filter(Boolean)
+        .map((symbol) => [symbol.toUpperCase(), asset] as const),
+    ),
+  );
+}
+
+function findFirstMatchedAsset(
+  symbols: string[],
+  assetsBySymbol: Map<string, NewsAsset>,
+): NewsAsset | null {
+  for (const symbol of symbols) {
+    const asset = assetsBySymbol.get(symbol.toUpperCase());
+
+    if (asset) {
+      return asset;
+    }
+  }
+
+  return null;
+}
+
+function dedupeFmpNewsItems(items: FmpNewsItem[]): FmpNewsItem[] {
+  return [
+    ...new Map(
+      items.map((item) => [
+        [item.symbol, item.publishedDate ?? item.date, item.url ?? item.title]
+          .filter(Boolean)
+          .join(":"),
+        item,
+      ]),
+    ).values(),
+  ];
+}
+
+function parseArrayResponse<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 function hasAny(value: string, needles: string[]): boolean {
   return needles.some((needle) => value.includes(needle));
 }
@@ -230,4 +495,20 @@ function parseNewsDate(value: string | undefined): Date | null {
 
 function toAssetClass(assetType: AssetType): string {
   return assetType.toLowerCase();
+}
+
+function emptyDiagnostics(
+  provider: NewsProviderName,
+  symbols: string[],
+  configured: boolean,
+): NewsProviderDiagnostics {
+  return {
+    provider,
+    configured,
+    requestedSymbols: symbols,
+    endpointAttempts: [],
+    rawItemCount: 0,
+    normalizedEventCount: 0,
+    droppedItemCount: 0,
+  };
 }

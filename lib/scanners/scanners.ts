@@ -1,13 +1,19 @@
 import type {
   AssetType,
   Prisma,
+  ScannerRunStatus,
   ScannerType,
   SignalDirection,
   SignalSeverity,
   WatchlistPriority,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { fetchFmpNewsEvents } from "@/lib/scanners/news-provider";
+import {
+  refreshProviderPricesForAssets,
+  type ProviderPriceRefreshSummary,
+} from "@/lib/market-data/provider-prices";
+import { fetchProviderNewsEvents } from "@/lib/scanners/news-provider";
+import type { NewsProviderDiagnostics } from "@/lib/scanners/news-provider";
 import {
   calculateCandidateScore,
   getCandidateAction,
@@ -31,6 +37,8 @@ import {
 type LatestPrice = {
   price: number;
   currency: string;
+  provider: string;
+  providerSymbol: string;
   observedAt: Date;
 } | null;
 
@@ -40,9 +48,52 @@ type SignalDraft = Omit<ScannerSignalInput, "score" | "suggestedAction"> & {
   hasSufficientData?: boolean;
 };
 
-export async function runPortfolioScanner() {
+export type ScannerRunOptions = {
+  universeId?: string | null;
+  highPriorityOnly?: boolean;
+  staleDataOnly?: boolean;
+  maxAssets?: number | null;
+};
+
+export async function runPortfolioScanner(options: ScannerRunOptions = {}) {
   return runScannerWithPersistence("PORTFOLIO", async (runId) => {
+    const scopedAssets = await prisma.position.findMany({
+      include: {
+        asset: {
+          include: {
+            marketPrices: {
+              orderBy: {
+                observedAt: "desc",
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+    const scopedPositions = applyAssetScopeControls(
+      scopedAssets,
+      options,
+      (position) => position.asset.marketPrices[0]?.observedAt ?? null,
+    );
+    const providerRefresh = await refreshProviderPricesForAssets(
+      scopedPositions.map((position) => position.asset),
+    );
     const positions = await prisma.position.findMany({
+      where: scopedPositions.length > 0
+        ? {
+            id: {
+              in: scopedPositions.map((position) => position.id),
+            },
+          }
+        : {
+            id: {
+              in: [],
+            },
+          },
       include: {
         asset: {
           include: {
@@ -91,23 +142,69 @@ export async function runPortfolioScanner() {
       scannerRunId: runId,
       positionCount: positions.length,
       assetIds: positions.map((position) => position.assetId),
+      controls: toControlsScope(options),
+      providerRefresh: toProviderRefreshScope(providerRefresh),
       thresholds: scannerThresholds,
-      warnings:
+      warnings: mergeWarnings(
+        providerRefresh,
         positions.length === 0
           ? ["No active portfolio positions were available to scan."]
           : [],
+      ),
     };
 
     return {
       inputScope,
       signals: finalizeSignals(signals),
+      status: providerRefresh.hadProviderIssue ? ("PARTIAL" as const) : undefined,
+      errorMessage: providerRefresh.hadProviderIssue
+        ? "One or more provider price refreshes did not fully complete."
+        : null,
     };
   });
 }
 
-export async function runWatchlistScanner() {
+export async function runWatchlistScanner(options: ScannerRunOptions = {}) {
   return runScannerWithPersistence("WATCHLIST", async (runId) => {
+    const scopedItems = await prisma.watchlistItem.findMany({
+      include: {
+        asset: {
+          include: {
+            marketPrices: {
+              orderBy: {
+                observedAt: "desc",
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: [
+        {
+          priority: "desc",
+        },
+        {
+          createdAt: "desc",
+        },
+      ],
+    });
+    const filteredScopedItems = applyAssetScopeControls(
+      options.highPriorityOnly
+        ? scopedItems.filter((item) => item.priority === "HIGH")
+        : scopedItems,
+      options,
+      (item) => item.asset.marketPrices[0]?.observedAt ?? null,
+    );
+    const providerRefresh = await refreshProviderPricesForAssets(
+      filteredScopedItems.map((item) => item.asset),
+    );
+
     const items = await prisma.watchlistItem.findMany({
+      where: {
+        id: {
+          in: filteredScopedItems.map((item) => item.id),
+        },
+      },
       include: {
         asset: {
           include: {
@@ -144,21 +241,29 @@ export async function runWatchlistScanner() {
       scannerRunId: runId,
       watchlistItemCount: items.length,
       assetIds: items.map((item) => item.assetId),
+      controls: toControlsScope(options),
+      providerRefresh: toProviderRefreshScope(providerRefresh),
       thresholds: scannerThresholds,
-      warnings:
+      warnings: mergeWarnings(
+        providerRefresh,
         items.length === 0 ? ["No watchlist items were available to scan."] : [],
+      ),
     };
 
     return {
       inputScope,
       signals: finalizeSignals(signals),
+      status: providerRefresh.hadProviderIssue ? ("PARTIAL" as const) : undefined,
+      errorMessage: providerRefresh.hadProviderIssue
+        ? "One or more provider price refreshes did not fully complete."
+        : null,
     };
   });
 }
 
-export async function runOpportunityScanner() {
+export async function runOpportunityScanner(options: ScannerRunOptions = {}) {
   return runScannerWithPersistence("OPPORTUNITY", async (runId) => {
-    const [ownedAssetIds, watchedAssetIds, universeAssets] = await Promise.all([
+    const [ownedAssetIds, watchedAssetIds, scopedUniverseAssets] = await Promise.all([
       prisma.position.findMany({
         select: {
           assetId: true,
@@ -174,6 +279,18 @@ export async function runOpportunityScanner() {
           discoveryUniverse: {
             isActive: true,
           },
+          ...(options.universeId
+            ? {
+                discoveryUniverseId: options.universeId,
+              }
+            : {}),
+          ...(options.highPriorityOnly
+            ? {
+                priority: {
+                  gte: 75,
+                },
+              }
+            : {}),
         },
         include: {
           discoveryUniverse: true,
@@ -203,6 +320,45 @@ export async function runOpportunityScanner() {
       ...ownedAssetIds.map((position) => position.assetId),
       ...watchedAssetIds.map((item) => item.assetId),
     ]);
+    const candidateUniverseAssets = scopedUniverseAssets.filter(
+      (entry) => !excludedAssetIds.has(entry.assetId),
+    );
+    const scopedCandidates = applyAssetScopeControls(
+      candidateUniverseAssets,
+      options,
+      (entry) => entry.asset.marketPrices[0]?.observedAt ?? null,
+    );
+    const providerRefresh = await refreshProviderPricesForAssets(
+      scopedCandidates.map((entry) => entry.asset),
+    );
+    const universeAssets = await prisma.discoveryUniverseAsset.findMany({
+      where: {
+        id: {
+          in: scopedCandidates.map((entry) => entry.id),
+        },
+      },
+      include: {
+        discoveryUniverse: true,
+        asset: {
+          include: {
+            marketPrices: {
+              orderBy: {
+                observedAt: "desc",
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: [
+        {
+          priority: "desc",
+        },
+        {
+          createdAt: "asc",
+        },
+      ],
+    });
 
     const signals = universeAssets
       .filter((entry) => !excludedAssetIds.has(entry.assetId))
@@ -220,29 +376,38 @@ export async function runOpportunityScanner() {
     const inputScope = {
       scannerRunId: runId,
       universeAssetCount: universeAssets.length,
-      excludedOwnedOrWatchedCount: universeAssets.length - signals.length,
+      excludedOwnedOrWatchedCount:
+        scopedUniverseAssets.length - candidateUniverseAssets.length,
       universeIds: [
         ...new Set(universeAssets.map((entry) => entry.discoveryUniverseId)),
       ],
+      controls: toControlsScope(options),
+      providerRefresh: toProviderRefreshScope(providerRefresh),
       thresholds: scannerThresholds,
-      warnings:
-        universeAssets.length === 0
+      warnings: mergeWarnings(
+        providerRefresh,
+        scopedUniverseAssets.length === 0
           ? [
               "No active discovery universe assets were available. Add assets to DiscoveryUniverseAsset before opportunity scanning.",
             ]
           : [],
+      ),
     };
 
     return {
       inputScope,
       signals: finalizeSignals(signals),
+      status: providerRefresh.hadProviderIssue ? ("PARTIAL" as const) : undefined,
+      errorMessage: providerRefresh.hadProviderIssue
+        ? "One or more provider price refreshes did not fully complete."
+        : null,
     };
   });
 }
 
-export async function runCryptoScanner() {
+export async function runCryptoScanner(options: ScannerRunOptions = {}) {
   return runScannerWithPersistence("CRYPTO", async (runId) => {
-    const assets = await prisma.asset.findMany({
+    const scopedAssets = await prisma.asset.findMany({
       where: {
         assetType: "CRYPTO",
         OR: [
@@ -266,6 +431,44 @@ export async function runCryptoScanner() {
             },
           },
         ],
+        ...(options.universeId
+          ? {
+              discoveryUniverseAssets: {
+                some: {
+                  discoveryUniverseId: options.universeId,
+                  discoveryUniverse: {
+                    isActive: true,
+                  },
+                },
+              },
+            }
+          : {}),
+      },
+      include: {
+        marketPrices: {
+          orderBy: {
+            observedAt: "desc",
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        symbol: "asc",
+      },
+    });
+    const filteredScopedAssets = applyAssetScopeControls(
+      scopedAssets,
+      options,
+      (asset) => asset.marketPrices[0]?.observedAt ?? null,
+    );
+    const providerRefresh = await refreshProviderPricesForAssets(
+      filteredScopedAssets,
+    );
+    const assets = await prisma.asset.findMany({
+      where: {
+        id: {
+          in: filteredScopedAssets.map((asset) => asset.id),
+        },
       },
       include: {
         marketPrices: {
@@ -341,8 +544,11 @@ export async function runCryptoScanner() {
       scannerRunId: runId,
       cryptoAssetCount: assets.length,
       assetIds: assets.map((asset) => asset.id),
+      controls: toControlsScope(options),
+      providerRefresh: toProviderRefreshScope(providerRefresh),
       thresholds: scannerThresholds,
-      warnings:
+      warnings: mergeWarnings(
+        providerRefresh,
         assets.length === 0
           ? [
               "No crypto assets were found in portfolio, watchlist, or active discovery universes.",
@@ -350,16 +556,21 @@ export async function runCryptoScanner() {
           : [
               "Crypto scanner MVP uses only latest spot price freshness and does not ingest paid on-chain or derivatives data.",
             ],
+      ),
     };
 
     return {
       inputScope,
       signals: finalizeSignals(signals),
+      status: providerRefresh.hadProviderIssue ? ("PARTIAL" as const) : undefined,
+      errorMessage: providerRefresh.hadProviderIssue
+        ? "One or more provider price refreshes did not fully complete."
+        : null,
     };
   });
 }
 
-export async function runNewsEventScanner() {
+export async function runNewsEventScanner(options: ScannerRunOptions = {}) {
   return runScannerWithPersistence("NEWS_EVENT", async (runId) => {
     const assets = await prisma.asset.findMany({
       where: {
@@ -387,22 +598,48 @@ export async function runNewsEventScanner() {
             },
           },
         ],
+        ...(options.universeId
+          ? {
+              discoveryUniverseAssets: {
+                some: {
+                  discoveryUniverseId: options.universeId,
+                  discoveryUniverse: {
+                    isActive: true,
+                  },
+                },
+              },
+            }
+          : {}),
+      },
+      include: {
+        marketPrices: {
+          orderBy: {
+            observedAt: "desc",
+          },
+          take: 1,
+        },
       },
       orderBy: {
         symbol: "asc",
       },
       take: 25,
     });
+    const scopedAssets = applyAssetScopeControls(
+      assets,
+      options,
+      (asset) => asset.marketPrices[0]?.observedAt ?? null,
+    );
 
-    if (!process.env.FMP_API_KEY) {
+    if (!process.env.TIINGO_API_KEY && !process.env.FMP_API_KEY) {
       const inputScope = {
         scannerRunId: runId,
         providerConfigured: false,
-        provider: "fmp",
-        scannedAssetCount: assets.length,
+        provider: "tiingo",
+        scannedAssetCount: scopedAssets.length,
+        controls: toControlsScope(options),
         thresholds: scannerThresholds,
         warnings: [
-          "FMP_API_KEY is not configured. Add it to .env to enable provider-backed news/event scanning.",
+          "No news provider API key is configured. Add TIINGO_API_KEY or FMP_API_KEY to .env to enable provider-backed news/event scanning.",
         ],
       };
 
@@ -410,11 +647,19 @@ export async function runNewsEventScanner() {
         inputScope,
         signals: [],
         status: "PARTIAL" as const,
-        errorMessage: "FMP news provider is not configured.",
+        errorMessage: "No news provider is configured.",
       };
     }
 
-    const providerEvents = await fetchFmpNewsEvents(assets);
+    const {
+      events: providerEvents,
+      diagnostics,
+      selectedProvider,
+    } = await fetchProviderNewsEvents(scopedAssets);
+    const providerAccessUnavailable =
+      scopedAssets.length > 0 &&
+      providerEvents.length === 0 &&
+      areNewsProvidersUnavailable(diagnostics);
     const materialEvents = providerEvents.filter(
       (event) => event.severity !== "LOW" || event.confidence >= 0.6,
     );
@@ -449,6 +694,9 @@ export async function runNewsEventScanner() {
               marketEventId: persistedEvents[index]?.id,
             },
           ],
+          marketEventIds: persistedEvents[index]?.id
+            ? [persistedEvents[index].id]
+            : [],
           dataFreshness: {
             eventOccurredAt: event.occurredAt.toISOString(),
             provider: event.sourceProvider,
@@ -466,23 +714,38 @@ export async function runNewsEventScanner() {
     const inputScope = {
       scannerRunId: runId,
       providerConfigured: true,
-      provider: "fmp",
-      scannedAssetCount: assets.length,
+      provider: selectedProvider ?? "none",
+      scannedAssetCount: scopedAssets.length,
       providerEventCount: providerEvents.length,
       persistedMaterialEventCount: persistedEvents.length,
+      providerDiagnostics: diagnostics,
+      controls: toControlsScope(options),
       thresholds: scannerThresholds,
-      warnings:
-        assets.length === 0
-          ? ["No stock/ETF assets were available for FMP news scanning."]
-          : providerEvents.length === 0
-            ? ["FMP returned no news events for the scanned assets."]
-            : [],
+      notices:
+        scopedAssets.length > 0 &&
+        providerEvents.length === 0 &&
+        !providerAccessUnavailable
+          ? ["Configured news providers returned no events for the scanned assets."]
+          : [],
+      warnings: [
+        ...(scopedAssets.length === 0
+          ? ["No stock/ETF assets were available for news/event scanning."]
+          : []),
+        ...(providerAccessUnavailable
+          ? [
+              "Configured news providers are unavailable for news endpoints on the current API keys or plans. News/Event scanner is disabled until a provider with news access is configured.",
+            ]
+          : []),
+      ],
     };
 
     return {
       inputScope,
       signals,
-      status: "SUCCEEDED" as const,
+      status: providerAccessUnavailable ? ("PARTIAL" as const) : ("SUCCEEDED" as const),
+      errorMessage: providerAccessUnavailable
+        ? "News provider endpoints are unavailable on current API keys or plans."
+        : null,
     };
   });
 }
@@ -492,7 +755,7 @@ async function runScannerWithPersistence(
   build: (runId: string) => Promise<{
     inputScope: Prisma.InputJsonValue;
     signals: ScannerSignalInput[];
-    status?: "SUCCEEDED" | "PARTIAL";
+    status?: Extract<ScannerRunStatus, "SUCCEEDED" | "PARTIAL">;
     errorMessage?: string | null;
   }>,
 ) {
@@ -829,6 +1092,7 @@ function createSignalDraft(input: {
   scoreInput: SignalDraft["scoreInput"];
   isOpportunity?: boolean;
   hasSufficientData?: boolean;
+  marketEventIds?: string[];
 }): SignalDraft {
   const score = calculateCandidateScore(input.scoreInput);
   const suggestedAction = getCandidateAction({
@@ -853,6 +1117,7 @@ function createSignalDraft(input: {
     isOpportunity: input.isOpportunity,
     hasSufficientData: input.hasSufficientData,
     isDeepAnalysisCandidate: suggestedAction === "RUN_DEEP_ANALYSIS",
+    marketEventIds: input.marketEventIds,
   };
 }
 
@@ -881,6 +1146,7 @@ function finalizeSignals(signals: SignalDraft[]): ScannerSignalInput[] {
         dataFreshness: signal.dataFreshness,
         isDeepAnalysisCandidate: suggestedAction === "RUN_DEEP_ANALYSIS",
         suggestedAction,
+        marketEventIds: signal.marketEventIds,
       };
     }),
   );
@@ -891,6 +1157,8 @@ function toLatestPrice(
     | {
         price: { toNumber: () => number };
         currency: string;
+        provider: string;
+        providerSymbol: string;
         observedAt: Date;
       }
     | undefined,
@@ -902,8 +1170,76 @@ function toLatestPrice(
   return {
     price: price.price.toNumber(),
     currency: price.currency,
+    provider: price.provider,
+    providerSymbol: price.providerSymbol,
     observedAt: price.observedAt,
   };
+}
+
+function toProviderRefreshScope(summary: ProviderPriceRefreshSummary) {
+  return {
+    attemptedAssetCount: summary.attemptedAssetCount,
+    createdPriceCount: summary.createdPriceCount,
+    providerSnapshots: summary.providerSnapshots,
+  };
+}
+
+function mergeWarnings(
+  providerRefresh: ProviderPriceRefreshSummary,
+  warnings: string[],
+): string[] {
+  return [...providerRefresh.warnings, ...warnings];
+}
+
+function applyAssetScopeControls<T>(
+  values: T[],
+  options: ScannerRunOptions,
+  getObservedAt: (value: T) => Date | null,
+): T[] {
+  const filtered = options.staleDataOnly
+    ? values.filter(
+        (value) => getScannerPriceState(getObservedAt(value)) !== "fresh",
+      )
+    : values;
+
+  if (!options.maxAssets || options.maxAssets <= 0) {
+    return filtered;
+  }
+
+  return filtered.slice(0, options.maxAssets);
+}
+
+function toControlsScope(options: ScannerRunOptions) {
+  return {
+    universeId: options.universeId ?? null,
+    highPriorityOnly: Boolean(options.highPriorityOnly),
+    staleDataOnly: Boolean(options.staleDataOnly),
+    maxAssets: options.maxAssets ?? null,
+  };
+}
+
+function areNewsProvidersUnavailable(
+  diagnostics: NewsProviderDiagnostics[],
+): boolean {
+  const configuredDiagnostics = diagnostics.filter(
+    (item) => item.configured && item.requestedSymbols.length > 0,
+  );
+
+  if (configuredDiagnostics.length === 0) {
+    return false;
+  }
+
+  return configuredDiagnostics.every(
+    (item) =>
+      item.endpointAttempts.length > 0 &&
+      item.endpointAttempts.every(
+        (attempt) =>
+          !attempt.ok &&
+          (attempt.status === 401 ||
+            attempt.status === 402 ||
+            attempt.status === 403),
+      ),
+  );
 }
 
 function portfolioRelevance(weightPercent: number): number {

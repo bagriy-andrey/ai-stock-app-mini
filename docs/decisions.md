@@ -84,7 +84,11 @@ Unresolved: Node-side BullMQ vs Python worker stack such as Celery/RQ.
 
 Partially resolved: the initial provider strategy is FMP, CoinGecko, FRED/ALFRED, SEC EDGAR, GDELT, and optional Marketaux. CoinGlass is the first planned tactical crypto upgrade. Tiingo and EODHD remain fallback candidates.
 
-Unresolved: exact FMP plan, exact endpoint coverage, initial historical backfill depth, Marketaux upgrade threshold, and when advanced providers such as Glassnode, CryptoQuant, or Santiment become worth the cost.
+Resolved for scanner price ingestion: stock/ETF scanner refresh uses the FMP quote endpoint at `/api/v3/quote/{symbols}` when `FMP_API_KEY` is configured. Crypto scanner refresh uses CoinGecko `/api/v3/simple/price` with USD spot, market cap, 24h volume, and last-updated metadata.
+
+Resolved for scanner news ingestion: Tiingo news is the primary provider when `TIINGO_API_KEY` is configured. FMP news remains a fallback because the current FMP key returned 403/402 for news endpoints.
+
+Unresolved: initial historical backfill depth, Marketaux upgrade threshold, and when advanced providers such as Glassnode, CryptoQuant, or Santiment become worth the cost.
 
 ### Database extensions
 

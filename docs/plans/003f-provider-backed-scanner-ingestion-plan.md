@@ -326,32 +326,32 @@ Add tests for:
 
 ### Phase 3F.2 - News/Event Provider Hardening
 
-- Harden FMP news ingestion or replace/augment with Marketaux when useful.
-- Improve event normalization and event-to-asset mapping.
-- Link `MarketEvent` records to scanner signals.
-- Keep provider-missing behavior explicit and non-fatal.
+- Harden FMP news ingestion or replace/augment with Marketaux when useful. Implemented for FMP by trying both legacy and stable news endpoints before treating the response as empty.
+- Improve event normalization and event-to-asset mapping. Implemented with symbol and provider-symbol matching plus provider diagnostics in scanner `inputScope`.
+- Link `MarketEvent` records to scanner signals. Implemented through `ScannerEventLink` creation when news/event signals are persisted.
+- Keep provider-missing behavior explicit and non-fatal. Implemented with `PARTIAL` runs and warnings.
 
 ### Phase 3F.3 - Discovery Universe Management
 
-- Add UI to create active discovery universes.
-- Add/remove assets from universes.
-- Show universe asset counts and provider coverage.
-- Keep opportunity scanning limited to active universes.
+- Add UI to create active discovery universes. Implemented on `/scanners`.
+- Add/remove assets from universes. Implemented on `/scanners` with shared asset metadata search.
+- Show universe asset counts and provider coverage. Implemented in the discovery universe manager table.
+- Keep opportunity scanning limited to active universes. Implemented, with optional selected-universe controls for manual runs.
 
 ### Phase 3F.4 - Scope and Batch Controls
 
-- Add manual run scope controls:
+- Add manual run scope controls. Implemented on scanner run cards:
   - high priority only
   - selected universe
   - stale data only
   - max assets per run
-- Prepare scanner services for future scheduled/background execution.
+- Prepare scanner services for future scheduled/background execution. Implemented by passing `ScannerRunOptions` into scanner services.
 
 ### Phase 3F.5 - Deep Analysis Escalation
 
-- Add "Run Deep Analysis" action from eligible scanner signals.
-- Include scanner signal and market event context in the Deep Analysis input snapshot.
-- Preserve manual user control; do not auto-run expensive analysis for every signal.
+- Add "Run Deep Analysis" action from eligible scanner signals. Implemented on scanner run detail pages for deep-analysis candidates.
+- Include scanner signal and market event context in the Deep Analysis input snapshot. Implemented through `scannerContext` in the analysis snapshot.
+- Preserve manual user control; do not auto-run expensive analysis for every signal. Implemented; scanner output never auto-starts Deep Analysis.
 
 ## Acceptance Criteria
 

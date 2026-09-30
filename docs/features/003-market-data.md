@@ -81,13 +81,17 @@ Deferred providers:
 
 Provider-backed scanner ingestion is specified in [003F - Provider-Backed Scanner Ingestion Plan](../plans/003f-provider-backed-scanner-ingestion-plan.md).
 
-The first practical scanner improvement should refresh scoped provider prices before scanner runs:
+The first practical scanner improvement refreshes scoped provider prices before scanner runs:
 
-- FMP for stock/ETF latest quotes where `FMP_API_KEY` is configured.
-- CoinGecko for crypto spot prices.
-- FMP news initially, with Marketaux as the optional upgrade path when better entity-linked financial news is needed.
+- FMP stock/ETF latest quotes use `GET https://financialmodelingprep.com/api/v3/quote/{symbols}` with batched comma-separated symbols and `FMP_API_KEY`.
+- CoinGecko crypto spot prices use `GET https://api.coingecko.com/api/v3/simple/price` with `ids`, `vs_currencies=usd`, `include_market_cap=true`, `include_24hr_vol=true`, and `include_last_updated_at=true`.
+- Tiingo news is the primary stock/ETF news provider for scanner events when `TIINGO_API_KEY` is configured.
+- FMP news remains a fallback when its plan allows news endpoint access.
+- Marketaux remains the optional upgrade path when better entity-linked financial news and sentiment are needed.
 
 This follow-up should remain scoped to portfolio, watchlist, and active discovery universe assets.
+
+Provider price refresh is best-effort. Missing keys, non-OK provider responses, empty usable responses, and stale provider timestamps are recorded as scanner `inputScope.warnings`; the scanner can still complete as `PARTIAL` using existing local `MarketPrice` rows. Provider-backed price snapshots are persisted as `MarketPrice` rows with `provider` set to `fmp` or `coingecko`.
 
 ## Edge Cases
 
