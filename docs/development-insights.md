@@ -1,6 +1,8 @@
 # Development Insights
 
-This file is the durable memory for implementation patterns discovered while working in this repository. Update it after development chats when there is a reusable insight that can reduce future investigation or rework.
+This file is the candidate memory for implementation patterns discovered while working in this repository. Update it after development chats when there is a reusable insight that can reduce future investigation or rework.
+
+Do not let this file grow without compression. When an insight repeats 2-3 times, promote the lesson into `docs/agent-learning/rules.md` or `AGENTS.md`, then remove the older raw entries from this file or archive them only if their detail remains useful.
 
 ## Entry Format
 
@@ -14,7 +16,7 @@ Use short entries. Prefer this structure:
 - Files: `path/to/file.ts`, `path/to/other-file.tsx`.
 ```
 
-Do not record generic progress logs. Record only insights that should help future coding, review, debugging, or design decisions.
+Do not record generic progress logs. Record only insights that should help future coding, review, debugging, or design decisions. Prefer deleting superseded entries after they become permanent rules.
 
 ## 2026-09-28 - Phase 2 Deep Analysis Boundary
 
@@ -87,12 +89,6 @@ Do not record generic progress logs. Record only insights that should help futur
 - Context: Native tooltips were inconsistent and table tooltips were clipped; analysis cost showed `N/A`.
 - Insight: Use the shared `Tooltip` component for app tooltips. It renders through a fixed-position portal so table/card overflow does not clip it. New AI usage records calculate `cost` from actual token counts and OpenRouter prompt/completion pricing when pricing metadata is available; old runs without stored cost remain `N/A`.
 - Files: `components/ui/tooltip.tsx`, `lib/analysis/orchestrator.ts`, `lib/model-router/pricing.ts`.
-
-## 2026-09-28 - Tooltip Rule and Refresh Control
-
-- Context: Refresh buttons and tooltip behavior needed repeated correction.
-- Insight: All new user-facing tooltips must use `components/ui/tooltip.tsx`, not native `title`. Refresh actions use `RefreshAnalysisForm`; pass `size="header"` for report header controls and keep compact size for table rows.
-- Files: `AGENTS.md`, `components/analysis/analysis-action-button.tsx`, `app/analysis/[id]/page.tsx`.
 
 ## 2026-09-28 - Completion Toast Timing
 
