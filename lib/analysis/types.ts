@@ -4,12 +4,13 @@ import type { ModelTier } from "@/lib/model-router/types";
 
 export const analysisPromptVersion = "phase2-deep-analysis-v1";
 
-export type AnalysisSource = "portfolio" | "watchlist";
+export type AnalysisSource = "portfolio" | "watchlist" | "scanner";
 
 export type AnalysisStartInput = {
   source: AnalysisSource;
   positionId?: string;
   watchlistItemId?: string;
+  scannerSignalId?: string;
 };
 
 export type AnalysisAgentName =
@@ -89,6 +90,35 @@ export type AnalysisInputSnapshot = {
     targetEntryPrice: number | null;
     notes: string | null;
   } | null;
+  scannerContext?: {
+    scannerSignalId: string;
+    scannerRunId: string;
+    scannerType: string;
+    signalType: string;
+    severity: string;
+    direction: string;
+    score: number;
+    confidence: number;
+    title: string;
+    summary: string;
+    suggestedAction: string;
+    reasons: unknown;
+    risks: unknown;
+    sourceRefs: unknown;
+    dataFreshness: unknown;
+    marketEvents: Array<{
+      id: string;
+      eventType: string;
+      occurredAt: string;
+      sourceProvider: string;
+      sourceTitle: string;
+      sourceUrl: string | null;
+      severity: string;
+      direction: string;
+      confidence: number;
+      summary: string;
+    }>;
+  };
   providerProvenance: string[];
   missingDataWarnings: string[];
 };

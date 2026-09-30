@@ -9,10 +9,12 @@ Completed:
 - Phase 0 foundation.
 - Phase 1 real portfolio, cash, platform/exchange holdings, watchlist, manual latest-price snapshots, price freshness, MVP FX conversion, and stabilization checks.
 - Phase 2 Deep Analysis MVP: manual portfolio/watchlist AI analysis trigger, code-defined TypeScript agent flow, persisted runs/reports/reasoning summaries, immutable run snapshots, model usage linkage, and history/detail UI.
+- Phase 3A/3B/3C/3D MVP foundation: scanner/event schema, deterministic portfolio/watchlist/opportunity/crypto/news-event scanner runs, persisted scanner signals, event taxonomy helpers, manual scanner UI, and add-to-watchlist action for opportunity candidates.
 
 Not yet implemented:
 
-- Scanners and event detection.
+- Full provider-backed scanner ingestion beyond the initial FMP news path.
+- Scheduled scanner automation.
 - Forecast Engine and immutable predictions.
 - Outcome evaluation.
 - Paper Trader.
@@ -59,6 +61,8 @@ Completion criteria: user can manually run portfolio-aware analysis for supporte
 
 ## Phase 3 - Lightweight Scanners and Event Detection
 
+Status: MVP implementation started.
+
 Objective: build the cheap funnel that decides what deserves deep analysis.
 
 Scope:
@@ -73,6 +77,8 @@ Scope:
 - Candidate ranking and material-change thresholds.
 
 Completion criteria: system can cheaply surface high-priority candidates without running deep LLM analysis for every asset.
+
+Follow-up specification: [003F - Provider-Backed Scanner Ingestion Plan](plans/003f-provider-backed-scanner-ingestion-plan.md).
 
 ## Phase 4 - TradingAgents Integration Hardening
 

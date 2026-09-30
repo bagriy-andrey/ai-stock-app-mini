@@ -150,6 +150,7 @@ export async function getAnalysisRunRestartInput(agentRunId: string) {
       id: agentRunId,
     },
     select: {
+      inputSnapshot: true,
       positionId: true,
       watchlistItemId: true,
     },
@@ -166,6 +167,16 @@ export async function getAnalysisRunRestartInput(agentRunId: string) {
     return {
       source: "watchlist" as const,
       watchlistItemId: run.watchlistItemId,
+    };
+  }
+
+  const snapshot = run.inputSnapshot as unknown as AnalysisInputSnapshot;
+  const scannerSignalId = snapshot.scannerContext?.scannerSignalId;
+
+  if (snapshot.source === "scanner" && scannerSignalId) {
+    return {
+      source: "scanner" as const,
+      scannerSignalId,
     };
   }
 

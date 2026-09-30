@@ -529,6 +529,18 @@ During Phase 3 implementation, update:
 - Run lint, typecheck, tests, and build
 - Update docs and development insights
 
+### Phase 3F - Provider-Backed Scanner Ingestion
+
+Detailed specification: [003F - Provider-Backed Scanner Ingestion Plan](003f-provider-backed-scanner-ingestion-plan.md).
+
+- Refresh scoped stock/ETF and crypto latest prices before scanner runs - implemented for manual portfolio, watchlist, opportunity, and crypto scanners
+- Persist provider-backed `MarketPrice` snapshots with provenance - implemented with `fmp` and `coingecko` provider values
+- Harden news/event ingestion beyond missing-provider placeholders - implemented for FMP news with explicit missing-key partial runs
+- Normalize provider news into deduped `MarketEvent` records - implemented with deterministic taxonomy normalization and `dedupeKey`
+- Keep ingestion scoped to portfolio, watchlist, and active discovery universes - implemented
+- Add scanner scope controls before scaling to large watchlists or universes - implemented for selected universe, high priority only, stale data only, and max assets per run
+- Add scanner-to-Deep Analysis escalation with scanner/event context - implemented for eligible scanner signals
+
 ## Completion Criteria
 
 Phase 3 is complete when:

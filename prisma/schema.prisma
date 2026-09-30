@@ -56,6 +56,43 @@ enum PortfolioExchangeType {
   STOCK
 }
 
+enum ScannerType {
+  PORTFOLIO
+  WATCHLIST
+  OPPORTUNITY
+  CRYPTO
+  NEWS_EVENT
+}
+
+enum ScannerRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+enum ScannerRunTrigger {
+  MANUAL
+  SCHEDULED
+  SYSTEM
+}
+
+enum SignalSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SignalDirection {
+  POSITIVE
+  NEGATIVE
+  MIXED
+  NEUTRAL
+  UNKNOWN
+}
+
 model AiUsageRecord {
   id           String       @id @default(cuid())
   agentRunId   String?
@@ -108,6 +145,9 @@ model Asset {
   marketPrices   MarketPrice[]
   agentRuns      AgentRun[]
   analysisReports AnalysisReport[]
+  discoveryUniverseAssets DiscoveryUniverseAsset[]
+  scannerSignals ScannerSignal[]
+  marketEvents MarketEvent[]
 
   @@unique([provider, providerSymbol])
   @@index([symbol])
@@ -322,4 +362,123 @@ model AgentReasoningSummary {
   @@index([agentName])
   @@index([stance])
   @@index([createdAt])
+}
+
+model DiscoveryUniverse {
+  id          String                   @id @default(cuid())
+  name        String                   @unique
+  description String?
+  isActive    Boolean                  @default(true)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  assets      DiscoveryUniverseAsset[]
+
+  @@index([isActive])
+}
+
+model DiscoveryUniverseAsset {
+  id                  String            @id @default(cuid())
+  discoveryUniverseId String
+  assetId             String
+  priority            Int               @default(50)
+  notes               String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  discoveryUniverse   DiscoveryUniverse @relation(fields: [discoveryUniverseId], references: [id], onDelete: Cascade)
+  asset               Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([discoveryUniverseId, assetId])
+  @@index([assetId])
+  @@index([priority])
+}
+
+model ScannerRun {
+  id                   String           @id @default(cuid())
+  scannerType          ScannerType
+  status               ScannerRunStatus @default(PENDING)
+  trigger              ScannerRunTrigger
+  configurationVersion String
+  inputScope           Json
+  startedAt            DateTime?
+  completedAt          DateTime?
+  errorMessage         String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  signals              ScannerSignal[]
+
+  @@index([scannerType, createdAt])
+  @@index([status])
+  @@index([trigger])
+}
+
+model ScannerSignal {
+  id                      String             @id @default(cuid())
+  scannerRunId            String
+  assetId                 String?
+  signalType              String
+  severity                SignalSeverity
+  direction               SignalDirection
+  score                   Decimal            @db.Decimal(8, 4)
+  confidence              Decimal            @db.Decimal(5, 4)
+  title                   String
+  summary                 String
+  reasons                 Json
+  risks                   Json
+  sourceRefs              Json
+  dataFreshness           Json
+  isDeepAnalysisCandidate Boolean            @default(false)
+  suggestedAction         String
+  createdAt               DateTime           @default(now())
+  scannerRun              ScannerRun         @relation(fields: [scannerRunId], references: [id], onDelete: Cascade)
+  asset                   Asset?             @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  eventLinks              ScannerEventLink[]
+
+  @@index([scannerRunId])
+  @@index([assetId])
+  @@index([severity])
+  @@index([isDeepAnalysisCandidate])
+  @@index([score])
+}
+
+model MarketEvent {
+  id              String             @id @default(cuid())
+  dedupeKey       String             @unique
+  eventType       String
+  occurredAt      DateTime
+  detectedAt      DateTime           @default(now())
+  sourceProvider  String
+  sourceUrl       String?
+  sourceTitle     String
+  affectedAssetId String?
+  affectedEntity  String?
+  assetClass      String?
+  sector          String?
+  country         String?
+  direction       SignalDirection
+  severity        SignalSeverity
+  confidence      Decimal            @db.Decimal(5, 4)
+  summary         String
+  rawPayload      Json
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  affectedAsset   Asset?             @relation(fields: [affectedAssetId], references: [id], onDelete: SetNull)
+  scannerLinks    ScannerEventLink[]
+
+  @@index([eventType])
+  @@index([occurredAt])
+  @@index([detectedAt])
+  @@index([affectedAssetId])
+  @@index([sourceProvider])
+}
+
+model ScannerEventLink {
+  id              String        @id @default(cuid())
+  scannerSignalId String
+  marketEventId   String
+  createdAt       DateTime      @default(now())
+  scannerSignal   ScannerSignal @relation(fields: [scannerSignalId], references: [id], onDelete: Cascade)
+  marketEvent     MarketEvent   @relation(fields: [marketEventId], references: [id], onDelete: Cascade)
+
+  @@unique([scannerSignalId, marketEventId])
+  @@index([marketEventId])
 }

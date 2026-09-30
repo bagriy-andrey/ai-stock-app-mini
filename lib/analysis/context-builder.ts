@@ -16,11 +16,119 @@ export async function buildAnalysisInputSnapshot(
     return buildPortfolioSnapshot(input.positionId);
   }
 
+  if (input.source === "scanner") {
+    if (!input.scannerSignalId) {
+      throw new Error("scannerSignalId is required for scanner analysis.");
+    }
+
+    return buildScannerSnapshot(input.scannerSignalId);
+  }
+
   if (!input.watchlistItemId) {
     throw new Error("watchlistItemId is required for watchlist analysis.");
   }
 
   return buildWatchlistSnapshot(input.watchlistItemId);
+}
+
+async function buildScannerSnapshot(
+  scannerSignalId: string,
+): Promise<AnalysisInputSnapshot> {
+  const signal = await prisma.scannerSignal.findUniqueOrThrow({
+    where: {
+      id: scannerSignalId,
+    },
+    include: {
+      scannerRun: true,
+      eventLinks: {
+        include: {
+          marketEvent: true,
+        },
+      },
+      asset: {
+        include: {
+          marketPrices: {
+            orderBy: {
+              observedAt: "desc",
+            },
+            take: 1,
+          },
+          positions: {
+            take: 1,
+            include: {
+              platformHoldings: {
+                orderBy: {
+                  platform: "asc",
+                },
+              },
+              portfolio: {
+                include: {
+                  cashBalances: {
+                    orderBy: {
+                      platform: "asc",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          watchlistItems: {
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  if (!signal.asset) {
+    throw new Error("Scanner signal is not linked to an asset.");
+  }
+
+  const position = signal.asset.positions[0] ?? null;
+  const watchlistItem = signal.asset.watchlistItems[0] ?? null;
+
+  return normalizeSnapshot({
+    asset: signal.asset,
+    createdAt: new Date(),
+    latestPrice: signal.asset.marketPrices[0] ?? null,
+    portfolio: position?.portfolio ?? null,
+    position,
+    requestedIntent:
+      position?.investmentIntent ??
+      watchlistItem?.investmentIntent ??
+      (signal.asset.assetType === "CRYPTO" ? "TACTICAL" : "LONG_TERM"),
+    scannerContext: {
+      scannerSignalId: signal.id,
+      scannerRunId: signal.scannerRunId,
+      scannerType: signal.scannerRun.scannerType,
+      signalType: signal.signalType,
+      severity: signal.severity,
+      direction: signal.direction,
+      score: signal.score.toNumber(),
+      confidence: signal.confidence.toNumber(),
+      title: signal.title,
+      summary: signal.summary,
+      suggestedAction: signal.suggestedAction,
+      reasons: signal.reasons,
+      risks: signal.risks,
+      sourceRefs: signal.sourceRefs,
+      dataFreshness: signal.dataFreshness,
+      marketEvents: signal.eventLinks.map((link) => ({
+        id: link.marketEvent.id,
+        eventType: link.marketEvent.eventType,
+        occurredAt: link.marketEvent.occurredAt.toISOString(),
+        sourceProvider: link.marketEvent.sourceProvider,
+        sourceTitle: link.marketEvent.sourceTitle,
+        sourceUrl: link.marketEvent.sourceUrl,
+        severity: link.marketEvent.severity,
+        direction: link.marketEvent.direction,
+        confidence: link.marketEvent.confidence.toNumber(),
+        summary: link.marketEvent.summary,
+      })),
+    },
+    source: "scanner",
+    watchlistItem,
+  });
 }
 
 async function buildPortfolioSnapshot(
@@ -176,7 +284,8 @@ function normalizeSnapshot(input: {
     }>;
   } | null;
   requestedIntent: "LONG_TERM" | "TACTICAL";
-  source: "portfolio" | "watchlist";
+  scannerContext?: AnalysisInputSnapshot["scannerContext"];
+  source: "portfolio" | "watchlist" | "scanner";
   watchlistItem: {
     id: string;
     investmentIntent: "LONG_TERM" | "TACTICAL";
@@ -267,11 +376,20 @@ function normalizeSnapshot(input: {
           notes: input.watchlistItem.notes,
         }
       : null,
+    scannerContext: input.scannerContext,
     providerProvenance: [
       `asset:${input.asset.provider}:${input.asset.providerSymbol}`,
       input.latestPrice
         ? `price:${input.latestPrice.provider}:${input.latestPrice.providerSymbol}`
         : "price:missing",
+      ...(input.scannerContext
+        ? [
+            `scanner:${input.scannerContext.scannerType}:${input.scannerContext.scannerSignalId}`,
+            ...input.scannerContext.marketEvents.map(
+              (event) => `marketEvent:${event.sourceProvider}:${event.id}`,
+            ),
+          ]
+        : []),
     ],
     missingDataWarnings,
   };

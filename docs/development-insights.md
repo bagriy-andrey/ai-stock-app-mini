@@ -117,3 +117,57 @@ Do not record generic progress logs. Record only insights that should help futur
 - Context: Phase 3 needed an implementation plan before schema and UI work.
 - Insight: Phase 3 scope is documented in `docs/plans/003-lightweight-scanners-event-detection-plan.md`. Start with manual scanner runs in the existing Next.js app, persist `ScannerRun`/`ScannerSignal`/`MarketEvent` provenance before escalation, keep scoring deterministic and explainable first, and defer forecasts, Paper Trader, Market Intelligence Memory, and learning cycles.
 - Files: `docs/plans/003-lightweight-scanners-event-detection-plan.md`, `docs/decisions.md`.
+
+## 2026-09-29 - Phase 3 Scanner MVP
+
+- Context: Manual scanner execution and persisted scanner signals were added.
+- Insight: Scanner UI lives at `/scanners` and `/scanners/[id]`. Server actions in `app/scanners/actions.ts` call deterministic services in `lib/scanners/scanners.ts`; pure threshold/ranking/event helpers live in `lib/scanners/thresholds.ts`, `lib/scanners/ranking.ts`, `lib/scanners/taxonomy.ts`, and `lib/scanners/events.ts`. Opportunity candidates are `ScannerSignal` rows with `suggestedAction=ADD_TO_WATCHLIST`; adding them creates a normal `WatchlistItem` and remains advisory-only.
+- Files: `app/scanners/page.tsx`, `app/scanners/[id]/page.tsx`, `app/scanners/actions.ts`, `lib/scanners/`, `prisma/schema.prisma`.
+
+## 2026-09-29 - Local Dev Port
+
+- Context: Default app ports conflicted with other local projects.
+- Insight: `npm run dev` and `npm run start` bind to `127.0.0.1:31773`; keep `APP_BASE_URL` aligned with `http://localhost:31773` in env examples and local env when changing ports.
+- Files: `package.json`, `.env.example`, `.env`.
+
+## 2026-09-29 - News/Event Scanner Provider Path
+
+- Context: The Phase 3 news/event scanner needed to move beyond a provider-missing placeholder.
+- Insight: `NEWS_EVENT` scanner now uses FMP stock news when `FMP_API_KEY` is configured, normalizes titles deterministically into the MVP event taxonomy, persists deduped `MarketEvent` rows through `dedupeKey`, and emits scanner signals. Without `FMP_API_KEY`, it still returns `PARTIAL` with a clear configuration warning.
+- Files: `lib/scanners/news-provider.ts`, `lib/scanners/scanners.ts`, `lib/scanners/repository.ts`.
+
+## 2026-09-29 - Provider-Backed Scanner Ingestion Spec
+
+- Context: Scanner usefulness depends on provider-backed prices, news, and events rather than mostly manual local data.
+- Insight: Use `docs/plans/003f-provider-backed-scanner-ingestion-plan.md` as the next scanner implementation guide. Prioritize scoped price refresh before scanner runs with FMP for stock/ETF quotes and CoinGecko for crypto spot; keep FMP news first and Marketaux as an optional upgrade for better entity-linked financial news.
+- Files: `docs/plans/003f-provider-backed-scanner-ingestion-plan.md`, `docs/features/003-market-data.md`, `docs/decisions.md`.
+
+## 2026-09-29 - Provider Price Refresh for Scanners
+
+- Context: Phase 3F added provider-backed latest-price ingestion before manual scanner runs.
+- Insight: `lib/market-data/provider-prices.ts` owns FMP quote and CoinGecko spot normalization plus best-effort `MarketPrice` persistence. Scanner services call `refreshProviderPricesForAssets` before loading latest prices; provider failures become `inputScope.providerRefresh` warnings and `PARTIAL` scanner runs, while local deterministic scanning still uses existing prices. Scanner signal detail UI should expose `sourceRefs` and `dataFreshness` for provider provenance.
+- Files: `lib/market-data/provider-prices.ts`, `lib/scanners/scanners.ts`, `app/scanners/[id]/page.tsx`.
+
+## 2026-09-29 - Scanner Notices vs Warnings
+
+- Context: News/event runs with configured FMP but no returned articles looked like missing-data failures in the UI.
+- Insight: Use `inputScope.notices` for successful empty provider responses and reserve `inputScope.warnings` for missing keys, provider failures, no scan scope, or degraded input quality. FMP news fetch should try both legacy `/api/v3/stock_news` and stable `/stable/news/stock` endpoints before concluding there are no usable articles.
+- Files: `lib/scanners/news-provider.ts`, `lib/scanners/scanners.ts`, `app/scanners/[id]/page.tsx`.
+
+## 2026-09-30 - Phase 3F Scanner Closure
+
+- Context: Provider-backed scanner ingestion needed discovery universe management, manual scope controls, and scanner-to-analysis escalation.
+- Insight: `/scanners` owns both scanner execution and discovery universe management. `ScannerRunCard` passes selected universe, high-priority, stale-data, and max-assets controls into `ScannerRunOptions`; `DiscoveryUniverseManager` uses shared `AssetSearchFields` so universe assets preserve provider metadata. Eligible scanner signals start Deep Analysis through `runDeepAnalysisFromScannerSignal`, and `AnalysisInputSnapshot.scannerContext` stores the scanner signal plus linked market events.
+- Files: `app/scanners/page.tsx`, `app/scanners/actions.ts`, `components/scanners/scanner-run-card.tsx`, `components/scanners/discovery-universe-manager.tsx`, `lib/scanners/scanners.ts`, `lib/analysis/context-builder.ts`.
+
+## 2026-09-30 - Tiingo News Provider
+
+- Context: FMP news endpoints returned 403/402 on the current key.
+- Insight: `lib/scanners/news-provider.ts` now uses a provider-independent result shape. Tiingo is primary when `TIINGO_API_KEY` is configured; FMP is fallback. Scanner `inputScope.providerDiagnostics` is an array, one entry per attempted provider.
+- Files: `lib/scanners/news-provider.ts`, `lib/scanners/scanners.ts`, `.env.example`, `config/env.ts`.
+
+## 2026-09-30 - News Provider Access State
+
+- Context: Tiingo Starter does not include Tiingo News and FMP news returned plan/auth errors.
+- Insight: Treat all-configured news providers returning only 401/402/403 as provider-unavailable, not as an empty-news result. News/Event scanner should complete as `PARTIAL` with a warning until a key/plan with news endpoint access is configured.
+- Files: `lib/scanners/scanners.ts`.
